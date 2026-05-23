@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 
-<body>
+<body class="mode-present">
   <header class="top-ui">
     <div class="brand">
       <strong>The Greening Earth</strong>
@@ -33,9 +33,22 @@
 
       <button class="compare-tab" data-mode="change">
         Show change, 2000–2025
-        <small><span class="decline-dot">■</span> Decline vs. <span class="growth-dot">■</span> Growth</small>
+        <small>
+          <span class="decline-dot">■</span> Decline vs.
+          <span class="growth-dot">■</span> Growth
+        </small>
       </button>
     </nav>
+
+    <div class="region-jump">
+      <label for="region-select">Jump to</label>
+      <select id="region-select">
+        <option value="global">Global Overview</option>
+        <option value="amazon">Amazon Basin</option>
+        <option value="sahel">Sahel / West Africa</option>
+        <option value="china">Northern China / Inner Mongolia</option>
+      </select>
+    </div>
   </header>
 
   <main class="map-stage">
@@ -53,50 +66,13 @@
       </div>
     </div>
 
-    <section class="story">
-      <article class="step active" data-view="global">
-        <h2>Global Overview</h2>
-        <p>
-          Placeholder text: introduce the overall story and the main question here.
-        </p>
-      </article>
-
-      <article class="step" data-view="amazon">
-        <h2>Amazon Basin</h2>
-        <p>
-          Placeholder text: describe why this region matters and what users should notice.
-        </p>
-      </article>
-
-      <article class="step" data-view="sahel">
-        <h2>Sahel / West Africa</h2>
-        <p>
-          Placeholder text: describe why this region matters and what users should notice.
-        </p>
-      </article>
-
-      <article class="step" data-view="china">
-        <h2>Northern China / Inner Mongolia</h2>
-        <p>
-          Placeholder text: describe why this region matters and what users should notice.
-        </p>
-      </article>
-
-      <article class="step" data-view="compare">
-        <h2>Compare Key Years</h2>
-        <p>
-          Placeholder text: explain how the comparison works.
-        </p>
-      </article>
+    <section class="story-panel">
+      <h2 id="story-title">Global Overview</h2>
+      <p id="story-text">
+        Placeholder text: introduce the overall story and the main question here.
+      </p>
     </section>
   </main>
-
-  <section class="footer-note">
-    <h2>Prototype Notes</h2>
-    <p>
-      Placeholder text: add dataset notes, design explanation, limitations, and final takeaway here.
-    </p>
-  </section>
 
   <script src="https://api.mapbox.com/mapbox-gl-js/v3.5.1/mapbox-gl.js"></script>
   <script src="main.js"></script>

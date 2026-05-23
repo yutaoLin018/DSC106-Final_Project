@@ -1,6 +1,6 @@
 :root {
   --bg: #f5f4ef;
-  --panel: rgba(255, 255, 255, 0.9);
+  --panel: rgba(255, 255, 255, 0.92);
   --text: #151515;
   --muted: #555;
   --border: rgba(0, 0, 0, 0.15);
@@ -14,12 +14,14 @@
 
 html,
 body {
+  width: 100%;
+  height: 100%;
   margin: 0;
   padding: 0;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--text);
   background: var(--bg);
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 /* Top UI */
@@ -31,7 +33,7 @@ body {
   width: 100%;
   z-index: 50;
   display: grid;
-  grid-template-columns: 230px 1fr 230px;
+  grid-template-columns: 230px 1fr 260px;
   pointer-events: none;
 }
 
@@ -77,13 +79,14 @@ body {
 }
 
 .compare-tab:hover {
-  background: #fff;
+  background: #ffffff;
 }
 
 .compare-tab.selected {
-  background: #fff;
+  background: #ffffff;
   font-weight: 700;
   transform: translateY(5px);
+  border-top: 3px solid #2b65d9;
 }
 
 .compare-tab small {
@@ -102,26 +105,61 @@ body {
   color: var(--decline);
 }
 
+/* Region jump menu */
+
+.region-jump {
+  justify-self: end;
+  padding: 0.85rem 1.25rem;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.region-jump label {
+  font-size: 0.8rem;
+  color: #555;
+}
+
+.region-jump select {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  border-radius: 0.35rem;
+  background: white;
+  color: #111;
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.14);
+}
+
 /* Map stage */
 
 .map-stage {
   position: relative;
-}
-
-.map-view,
-#compare-view {
-  position: sticky;
-  top: 0;
   width: 100%;
   height: 100vh;
+  overflow: hidden;
+}
+
+/* Important: do not use display:none for Mapbox containers */
+
+#single-map,
+#compare-view {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100vh;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 #single-map {
-  display: none;
+  z-index: 1;
 }
 
 #compare-view {
-  display: grid;
+  z-index: 2;
   grid-template-columns: 1fr 1fr;
 }
 
@@ -129,6 +167,26 @@ body {
   width: 100%;
   height: 100vh;
 }
+
+/* Present and change use the single map */
+
+body.mode-present #single-map,
+body.mode-change #single-map {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* Compare uses the split maps */
+
+body.mode-compare #compare-view {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  display: grid;
+}
+
+/* Split line and labels */
 
 .split-line {
   position: absolute;
@@ -161,44 +219,37 @@ body {
   font-size: 0.9rem;
 }
 
-/* Story text */
+.split-line,
+.year-labels {
+  opacity: 0;
+  visibility: hidden;
+}
 
-.story {
-  position: relative;
+body.mode-compare .split-line,
+body.mode-compare .year-labels {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Story panel */
+
+.story-panel {
+  position: absolute;
+  left: 5vw;
+  bottom: 7vh;
   z-index: 30;
   width: min(420px, calc(100% - 2rem));
-  margin-left: 5vw;
-  margin-top: -100vh;
-  padding: 12vh 0 32vh;
   pointer-events: none;
 }
 
-.step {
-  min-height: 92vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  opacity: 0.3;
-  transition: opacity 0.25s ease;
-}
-
-.step.active {
-  opacity: 1;
-}
-
-.step h2,
-.step p {
-  pointer-events: auto;
-}
-
-.step h2 {
-  font-size: clamp(1.8rem, 3vw, 2.4rem);
+.story-panel h2 {
+  font-size: clamp(1.8rem, 3vw, 2.5rem);
   margin: 0 0 1rem;
   line-height: 1.1;
   color: #111;
 }
 
-.step p {
+.story-panel p {
   margin: 0;
   padding: 1rem 1.1rem;
   line-height: 1.65;
@@ -208,24 +259,7 @@ body {
   border-radius: 1rem;
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.08);
   backdrop-filter: blur(4px);
-}
-
-/* Footer */
-
-.footer-note {
-  max-width: 850px;
-  margin: 0 auto;
-  padding: 5rem 2rem 6rem;
-}
-
-.footer-note h2 {
-  font-size: 2rem;
-  margin-bottom: 1rem;
-}
-
-.footer-note p {
-  color: var(--muted);
-  line-height: 1.7;
+  pointer-events: auto;
 }
 
 /* Popup */
@@ -236,34 +270,9 @@ body {
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
 }
 
-/* Mode display */
-
-body.mode-compare #compare-view {
-  display: grid;
-}
-
-body.mode-compare #single-map {
-  display: none;
-}
-
-body.mode-present #compare-view,
-body.mode-change #compare-view {
-  display: none;
-}
-
-body.mode-present #single-map,
-body.mode-change #single-map {
-  display: block;
-}
-
-body.mode-present .year-labels,
-body.mode-change .year-labels {
-  display: none;
-}
-
 /* Responsive */
 
-@media (max-width: 900px) {
+@media (max-width: 1000px) {
   .top-ui {
     grid-template-columns: 1fr;
   }
@@ -287,8 +296,20 @@ body.mode-change .year-labels {
     display: none;
   }
 
-  .story {
-    margin-left: 1rem;
+  .region-jump {
+    justify-self: stretch;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    background: rgba(255, 255, 255, 0.9);
+  }
+
+  .region-jump select {
+    flex: 1;
+  }
+
+  .story-panel {
+    left: 1rem;
+    bottom: 5vh;
     width: calc(100% - 2rem);
   }
 }

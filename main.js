@@ -1,7 +1,5 @@
 mapboxgl.accessToken = "pk.eyJ1IjoieXV0YW9saW4iLCJhIjoiY21wNWI0MDl5MDlldTJwcTI3bmtkY3h3NiJ9.7aMzhLHSwm6BOedHTptjNA";
 
-document.body.classList.add("mode-present");
-
 const views = {
   global: {
     center: [10, 18],
@@ -26,12 +24,25 @@ const views = {
     zoom: 4.3,
     pitch: 60,
     bearing: -15
+  }
+};
+
+const storyText = {
+  global: {
+    title: "Global Overview",
+    text: "Placeholder text: introduce the overall story and the main question here."
   },
-  compare: {
-    center: [10, 18],
-    zoom: 1.35,
-    pitch: 56,
-    bearing: 0
+  amazon: {
+    title: "Amazon Basin",
+    text: "Placeholder text: describe why this region matters and what users should notice."
+  },
+  sahel: {
+    title: "Sahel / West Africa",
+    text: "Placeholder text: describe why this region matters and what users should notice."
+  },
+  china: {
+    title: "Northern China / Inner Mongolia",
+    text: "Placeholder text: describe why this region matters and what users should notice."
   }
 };
 
@@ -46,8 +57,8 @@ let activeView = "global";
 
 const mapOptions = {
   style: "mapbox://styles/mapbox/light-v11",
-  zoom: views.global.zoom,
   center: views.global.center,
+  zoom: views.global.zoom,
   pitch: views.global.pitch,
   bearing: views.global.bearing,
   antialias: true,
@@ -93,8 +104,8 @@ async function initAllMaps() {
   const changeData = buildChangeGeoJSON(data2000, data2025);
 
   setupMapLayer(singleMap, data2025, "present");
-  setupMapLayer(leftMap, data2000, "present");
-  setupMapLayer(rightMap, data2025, "present");
+  setupMapLayer(leftMap, data2000, "compare");
+  setupMapLayer(rightMap, data2025, "compare");
 
   singleMap.addSource("change-spikes", {
     type: "geojson",
@@ -129,13 +140,15 @@ async function initAllMaps() {
     }
   });
 
-  setupScroll();
   setupTopTabs();
+  setupRegionJump();
   setupPopup(singleMap);
   setupPopup(leftMap);
   setupPopup(rightMap);
   syncCompareMaps();
 
+  updateStoryPanel("global");
+  setMode("present");
   resizeMaps();
 }
 
@@ -199,7 +212,7 @@ function buildChangeGeoJSON(data2000, data2025) {
 
   data2000.features.forEach(feature => {
     const key = cellKey(feature);
-    byLocation.set(key, feature.properties.greenness);
+    byLocation.set(key, Number(feature.properties.greenness));
   });
 
   const features = [];
@@ -210,7 +223,7 @@ function buildChangeGeoJSON(data2000, data2025) {
 
     if (oldValue === undefined) return;
 
-    const newValue = feature.properties.greenness;
+    const newValue = Number(feature.properties.greenness);
     const change = Number((newValue - oldValue).toFixed(4));
 
     features.push({
@@ -232,8 +245,17 @@ function buildChangeGeoJSON(data2000, data2025) {
 
 function cellKey(feature) {
   const coords = feature.geometry.coordinates[0];
-  const lon = coords.reduce((sum, p) => sum + p[0], 0) / coords.length;
-  const lat = coords.reduce((sum, p) => sum + p[1], 0) / coords.length;
+
+  let lonSum = 0;
+  let latSum = 0;
+
+  coords.forEach(coord => {
+    lonSum += coord[0];
+    latSum += coord[1];
+  });
+
+  const lon = lonSum / coords.length;
+  const lat = latSum / coords.length;
 
   return `${lon.toFixed(3)},${lat.toFixed(3)}`;
 }
@@ -258,50 +280,69 @@ function setMode(mode) {
   document.body.classList.add(`mode-${mode}`);
 
   if (mode === "compare") {
-    const view = views[activeView];
-    
-    mapFlyTo(leftMap, views[activeView]);
-    mapFlyTo(rightMap, views[activeView]);
+    const view = getCurrentCamera(singleMap) || views[activeView];
 
-    leftMap.setPaintProperty("spikes-layer", "fill-extrusion-opacity", 0.65);
-    rightMap.setPaintProperty("spikes-layer", "fill-extrusion-opacity", 0.65);
+    jumpMapTo(leftMap, view);
+    jumpMapTo(rightMap, view);
+
+    if (leftMap.getLayer("spikes-layer")) {
+      leftMap.setPaintProperty("spikes-layer", "fill-extrusion-opacity", 0.65);
+    }
+
+    if (rightMap.getLayer("spikes-layer")) {
+      rightMap.setPaintProperty("spikes-layer", "fill-extrusion-opacity", 0.65);
+    }
   }
 
   if (mode === "present") {
-    singleMap.setLayoutProperty("spikes-layer", "visibility", "visible");
-    singleMap.setLayoutProperty("change-spikes-layer", "visibility", "none");
-    singleMap.setPaintProperty("spikes-layer", "fill-extrusion-opacity", 0.92);
+    if (singleMap.getLayer("spikes-layer")) {
+      singleMap.setLayoutProperty("spikes-layer", "visibility", "visible");
+      singleMap.setPaintProperty("spikes-layer", "fill-extrusion-opacity", 0.92);
+    }
+
+    if (singleMap.getLayer("change-spikes-layer")) {
+      singleMap.setLayoutProperty("change-spikes-layer", "visibility", "none");
+    }
+
     mapFlyTo(singleMap, views[activeView]);
   }
 
   if (mode === "change") {
-    singleMap.setLayoutProperty("spikes-layer", "visibility", "none");
-    singleMap.setLayoutProperty("change-spikes-layer", "visibility", "visible");
+    if (singleMap.getLayer("spikes-layer")) {
+      singleMap.setLayoutProperty("spikes-layer", "visibility", "none");
+    }
+
+    if (singleMap.getLayer("change-spikes-layer")) {
+      singleMap.setLayoutProperty("change-spikes-layer", "visibility", "visible");
+    }
+
     mapFlyTo(singleMap, views[activeView]);
   }
 
   resizeMaps();
 }
 
-function setupScroll() {
-  const steps = document.querySelectorAll(".step");
+function setupRegionJump() {
+  const select = document.querySelector("#region-select");
 
-  const observer = new IntersectionObserver(
-    entries => {
-      entries.forEach(entry => {
-        if (!entry.isIntersecting) return;
+  if (!select) return;
 
-        steps.forEach(step => step.classList.remove("active"));
-        entry.target.classList.add("active");
+  select.addEventListener("change", () => {
+    const viewName = select.value;
 
-        activeView = entry.target.dataset.view;
-        flyAllTo(activeView);
-      });
-    },
-    { threshold: 0.55 }
-  );
+    activeView = viewName;
+    updateStoryPanel(viewName);
+    flyAllTo(viewName);
+  });
+}
 
-  steps.forEach(step => observer.observe(step));
+function updateStoryPanel(viewName) {
+  const story = storyText[viewName];
+
+  if (!story) return;
+
+  document.querySelector("#story-title").textContent = story.title;
+  document.querySelector("#story-text").textContent = story.text;
 }
 
 function flyAllTo(viewName) {
@@ -325,6 +366,59 @@ function mapFlyTo(map, view) {
     bearing: view.bearing,
     duration: 1300,
     essential: true
+  });
+}
+
+function jumpMapTo(map, view) {
+  map.jumpTo({
+    center: view.center,
+    zoom: view.zoom,
+    pitch: view.pitch,
+    bearing: view.bearing
+  });
+}
+
+function getCurrentCamera(map) {
+  if (!map) return null;
+
+  return {
+    center: map.getCenter(),
+    zoom: map.getZoom(),
+    pitch: map.getPitch(),
+    bearing: map.getBearing()
+  };
+}
+
+function syncCompareMaps() {
+  let syncing = false;
+
+  function sync(sourceMap, targetMap) {
+    if (syncing) return;
+
+    syncing = true;
+
+    targetMap.jumpTo({
+      center: sourceMap.getCenter(),
+      zoom: sourceMap.getZoom(),
+      bearing: sourceMap.getBearing(),
+      pitch: sourceMap.getPitch()
+    });
+
+    requestAnimationFrame(() => {
+      syncing = false;
+    });
+  }
+
+  leftMap.on("move", () => {
+    if (currentMode === "compare") {
+      sync(leftMap, rightMap);
+    }
+  });
+
+  rightMap.on("move", () => {
+    if (currentMode === "compare") {
+      sync(rightMap, leftMap);
+    }
   });
 }
 
@@ -382,45 +476,15 @@ function setupPopup(map) {
 }
 
 function resizeMaps() {
+  requestAnimationFrame(() => {
+    singleMap.resize();
+    leftMap.resize();
+    rightMap.resize();
+  });
+
   setTimeout(() => {
     singleMap.resize();
     leftMap.resize();
     rightMap.resize();
-  }, 50);
-}
-
-function syncCompareMaps() {
-  let syncing = false;
-
-  function sync(sourceMap, targetMap) {
-    if (syncing) return;
-
-    syncing = true;
-
-    const center = sourceMap.getCenter();
-    const zoom = sourceMap.getZoom();
-    const bearing = sourceMap.getBearing();
-    const pitch = sourceMap.getPitch();
-
-    targetMap.jumpTo({
-      center,
-      zoom,
-      bearing,
-      pitch
-    });
-
-    syncing = false;
-  }
-
-  leftMap.on("move", () => {
-    if (currentMode === "compare") {
-      sync(leftMap, rightMap);
-    }
-  });
-
-  rightMap.on("move", () => {
-    if (currentMode === "compare") {
-      sync(rightMap, leftMap);
-    }
-  });
+  }, 250);
 }
