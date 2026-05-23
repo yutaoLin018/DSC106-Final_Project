@@ -1,0 +1,294 @@
+:root {
+  --bg: #f5f4ef;
+  --panel: rgba(255, 255, 255, 0.9);
+  --text: #151515;
+  --muted: #555;
+  --border: rgba(0, 0, 0, 0.15);
+  --growth: #249971;
+  --decline: #d95f3d;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  overflow-x: hidden;
+}
+
+/* Top UI */
+
+.top-ui {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 50;
+  display: grid;
+  grid-template-columns: 230px 1fr 230px;
+  pointer-events: none;
+}
+
+.brand {
+  padding: 1rem 1.25rem;
+  pointer-events: auto;
+}
+
+.brand strong {
+  display: block;
+  font-size: 1.15rem;
+  line-height: 1.1;
+}
+
+.brand span {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: #444;
+}
+
+.compare-tabs {
+  justify-self: center;
+  display: flex;
+  align-items: stretch;
+  pointer-events: auto;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
+}
+
+.compare-tab {
+  min-width: 185px;
+  border: 0;
+  border-right: 1px solid rgba(0, 0, 0, 0.18);
+  background: #eeeeee;
+  color: #111;
+  padding: 0.85rem 1rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+.compare-tab:last-child {
+  border-right: 0;
+}
+
+.compare-tab:hover {
+  background: #fff;
+}
+
+.compare-tab.selected {
+  background: #fff;
+  font-weight: 700;
+  transform: translateY(5px);
+}
+
+.compare-tab small {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: #555;
+}
+
+.growth-dot {
+  color: var(--growth);
+}
+
+.decline-dot {
+  color: var(--decline);
+}
+
+/* Map stage */
+
+.map-stage {
+  position: relative;
+}
+
+.map-view,
+#compare-view {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  height: 100vh;
+}
+
+#single-map {
+  display: none;
+}
+
+#compare-view {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.compare-map {
+  width: 100%;
+  height: 100vh;
+}
+
+.split-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 5px;
+  background: #000;
+  transform: translateX(-50%);
+  z-index: 20;
+  pointer-events: none;
+}
+
+.year-labels {
+  position: absolute;
+  left: 50%;
+  bottom: 45%;
+  transform: translateX(-50%);
+  z-index: 25;
+  display: flex;
+  gap: 0.35rem;
+  pointer-events: none;
+}
+
+.year-labels span {
+  background: #000;
+  color: #fff;
+  font-weight: 700;
+  padding: 0.35rem 0.45rem;
+  font-size: 0.9rem;
+}
+
+/* Story text */
+
+.story {
+  position: relative;
+  z-index: 30;
+  width: min(420px, calc(100% - 2rem));
+  margin-left: 5vw;
+  margin-top: -100vh;
+  padding: 12vh 0 32vh;
+  pointer-events: none;
+}
+
+.step {
+  min-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  opacity: 0.3;
+  transition: opacity 0.25s ease;
+}
+
+.step.active {
+  opacity: 1;
+}
+
+.step h2,
+.step p {
+  pointer-events: auto;
+}
+
+.step h2 {
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  margin: 0 0 1rem;
+  line-height: 1.1;
+  color: #111;
+}
+
+.step p {
+  margin: 0;
+  padding: 1rem 1.1rem;
+  line-height: 1.65;
+  color: var(--muted);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(4px);
+}
+
+/* Footer */
+
+.footer-note {
+  max-width: 850px;
+  margin: 0 auto;
+  padding: 5rem 2rem 6rem;
+}
+
+.footer-note h2 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+.footer-note p {
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+/* Popup */
+
+.mapboxgl-popup-content {
+  border-radius: 0.8rem;
+  padding: 0.8rem 0.9rem;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+}
+
+/* Mode display */
+
+body.mode-compare #compare-view {
+  display: grid;
+}
+
+body.mode-compare #single-map {
+  display: none;
+}
+
+body.mode-present #compare-view,
+body.mode-change #compare-view {
+  display: none;
+}
+
+body.mode-present #single-map,
+body.mode-change #single-map {
+  display: block;
+}
+
+body.mode-present .year-labels,
+body.mode-change .year-labels {
+  display: none;
+}
+
+/* Responsive */
+
+@media (max-width: 900px) {
+  .top-ui {
+    grid-template-columns: 1fr;
+  }
+
+  .brand {
+    display: none;
+  }
+
+  .compare-tabs {
+    width: 100%;
+  }
+
+  .compare-tab {
+    min-width: 0;
+    flex: 1;
+    font-size: 0.82rem;
+    padding: 0.7rem 0.4rem;
+  }
+
+  .compare-tab small {
+    display: none;
+  }
+
+  .story {
+    margin-left: 1rem;
+    width: calc(100% - 2rem);
+  }
+}

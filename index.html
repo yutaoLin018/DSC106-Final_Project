@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>The Greening Earth</title>
+
+  <link
+    href="https://api.mapbox.com/mapbox-gl-js/v3.5.1/mapbox-gl.css"
+    rel="stylesheet"
+  />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <header class="top-ui">
+    <div class="brand">
+      <strong>The Greening Earth</strong>
+      <span>About this Project</span>
+    </div>
+
+    <nav class="compare-tabs">
+      <button class="compare-tab" data-mode="compare">
+        Compare to 2000
+      </button>
+
+      <button class="compare-tab selected" data-mode="present">
+        Vegetation 2025
+        <small>Latest prototype layer</small>
+      </button>
+
+      <button class="compare-tab" data-mode="change">
+        Show change, 2000–2025
+        <small><span class="decline-dot">■</span> Decline vs. <span class="growth-dot">■</span> Growth</small>
+      </button>
+    </nav>
+  </header>
+
+  <main class="map-stage">
+    <div id="single-map" class="map-view"></div>
+
+    <div id="compare-view">
+      <div id="left-map" class="compare-map"></div>
+      <div id="right-map" class="compare-map"></div>
+
+      <div class="split-line"></div>
+
+      <div class="year-labels">
+        <span>2000</span>
+        <span>2025</span>
+      </div>
+    </div>
+
+    <section class="story">
+      <article class="step active" data-view="global">
+        <h2>Global Overview</h2>
+        <p>
+          Placeholder text: introduce the overall story and the main question here.
+        </p>
+      </article>
+
+      <article class="step" data-view="amazon">
+        <h2>Amazon Basin</h2>
+        <p>
+          Placeholder text: describe why this region matters and what users should notice.
+        </p>
+      </article>
+
+      <article class="step" data-view="sahel">
+        <h2>Sahel / West Africa</h2>
+        <p>
+          Placeholder text: describe why this region matters and what users should notice.
+        </p>
+      </article>
+
+      <article class="step" data-view="china">
+        <h2>Northern China / Inner Mongolia</h2>
+        <p>
+          Placeholder text: describe why this region matters and what users should notice.
+        </p>
+      </article>
+
+      <article class="step" data-view="compare">
+        <h2>Compare Key Years</h2>
+        <p>
+          Placeholder text: explain how the comparison works.
+        </p>
+      </article>
+    </section>
+  </main>
+
+  <section class="footer-note">
+    <h2>Prototype Notes</h2>
+    <p>
+      Placeholder text: add dataset notes, design explanation, limitations, and final takeaway here.
+    </p>
+  </section>
+
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.5.1/mapbox-gl.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
