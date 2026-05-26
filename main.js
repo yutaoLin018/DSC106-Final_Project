@@ -70,6 +70,7 @@ let compareBaseYear = "2000";
 let currentDetail = "low";
 let cachedData = {};
 let syncing = false;
+let isLoadingDetail = false;
 
 const mapOptions = {
   style: "mapbox://styles/mapbox/light-v11",
@@ -169,8 +170,16 @@ async function initAllMaps() {
   setupDetailSwitching();
 
   updateStoryPanel("global");
-  setMode("present");
+  await setMode("present");
   resizeMaps();
+
+  // Preload medium data shortly after initial render.
+  // This helps region switching feel smoother.
+  setTimeout(() => {
+    getGeoJSON("2025", "medium");
+    getGeoJSON("2000", "medium");
+    getGeoJSON("2013", "medium");
+  }, 1500);
 }
 
 function setupMapLayer(map, data, mode) {
@@ -218,9 +227,14 @@ function getSpikePaint(mode) {
   };
 }
 
-function detailFromZoom(zoom) {
-  if (zoom >= 6.0) return "high";
-  if (zoom >= 4.0) return "medium";
+function detailFromZoom(zoom, viewName = activeView) {
+  if (zoom >= 7.0) return "high";
+
+  // Any selected region should use at least medium detail.
+  if (viewName !== "global") return "medium";
+
+  if (zoom >= 5.0) return "medium";
+
   return "low";
 }
 
@@ -247,73 +261,75 @@ async function loadGeoJSON(path) {
 function setupDetailSwitching() {
   singleMap.on("zoomend", async () => {
     if (currentMode === "present") {
-      await updatePresentDetail();
+      await loadDetailForCurrentView(activeView, getCurrentCamera(singleMap));
     }
 
     if (currentMode === "change") {
-      await updateChangeDetail();
+      await loadDetailForCurrentView(activeView, getCurrentCamera(singleMap));
     }
   });
 
   leftMap.on("zoomend", async () => {
     if (currentMode === "compare") {
-      await updateCompareDetail(leftMap.getZoom());
+      await loadDetailForCurrentView(activeView, getCurrentCamera(leftMap));
     }
   });
 
   rightMap.on("zoomend", async () => {
     if (currentMode === "compare") {
-      await updateCompareDetail(rightMap.getZoom());
+      await loadDetailForCurrentView(activeView, getCurrentCamera(rightMap));
     }
   });
 }
 
-async function updatePresentDetail() {
-  const detail = detailFromZoom(singleMap.getZoom());
+async function loadDetailForCurrentView(viewName, view) {
+  if (isLoadingDetail) return;
+
+  const detail = detailFromZoom(view.zoom, viewName);
 
   if (detail === currentDetail) return;
 
-  currentDetail = detail;
+  isLoadingDetail = true;
 
-  const data2025 = await getGeoJSON("2025", detail);
+  try {
+    if (currentMode === "compare") {
+      const leftData = await getGeoJSON(compareBaseYear, detail);
+      const rightData = await getGeoJSON("2025", detail);
 
-  if (singleMap.getSource("spikes")) {
-    singleMap.getSource("spikes").setData(data2025);
-  }
-}
+      currentDetail = detail;
 
-async function updateCompareDetail(zoom) {
-  const detail = detailFromZoom(zoom);
+      if (leftMap.getSource("spikes")) {
+        leftMap.getSource("spikes").setData(leftData);
+      }
 
-  if (detail === currentDetail) return;
+      if (rightMap.getSource("spikes")) {
+        rightMap.getSource("spikes").setData(rightData);
+      }
+    }
 
-  currentDetail = detail;
+    if (currentMode === "present") {
+      const data2025 = await getGeoJSON("2025", detail);
 
-  const leftData = await getGeoJSON(compareBaseYear, detail);
-  const rightData = await getGeoJSON("2025", detail);
+      currentDetail = detail;
 
-  if (leftMap.getSource("spikes")) {
-    leftMap.getSource("spikes").setData(leftData);
-  }
+      if (singleMap.getSource("spikes")) {
+        singleMap.getSource("spikes").setData(data2025);
+      }
+    }
 
-  if (rightMap.getSource("spikes")) {
-    rightMap.getSource("spikes").setData(rightData);
-  }
-}
+    if (currentMode === "change") {
+      const data2000 = await getGeoJSON("2000", detail);
+      const data2025 = await getGeoJSON("2025", detail);
+      const changeData = buildChangeGeoJSON(data2000, data2025);
 
-async function updateChangeDetail() {
-  const detail = detailFromZoom(singleMap.getZoom());
+      currentDetail = detail;
 
-  if (detail === currentDetail) return;
-
-  currentDetail = detail;
-
-  const data2000 = await getGeoJSON("2000", detail);
-  const data2025 = await getGeoJSON("2025", detail);
-  const changeData = buildChangeGeoJSON(data2000, data2025);
-
-  if (singleMap.getSource("change-spikes")) {
-    singleMap.getSource("change-spikes").setData(changeData);
+      if (singleMap.getSource("change-spikes")) {
+        singleMap.getSource("change-spikes").setData(changeData);
+      }
+    }
+  } finally {
+    isLoadingDetail = false;
   }
 }
 
@@ -322,7 +338,10 @@ function buildChangeGeoJSON(dataOld, dataNew) {
 
   dataOld.features.forEach(feature => {
     const key = cellKey(feature);
-    byLocation.set(key, Number(feature.properties.ndvi ?? feature.properties.greenness));
+    byLocation.set(
+      key,
+      Number(feature.properties.ndvi ?? feature.properties.greenness)
+    );
   });
 
   const features = [];
@@ -336,7 +355,7 @@ function buildChangeGeoJSON(dataOld, dataNew) {
     const newValue = Number(feature.properties.ndvi ?? feature.properties.greenness);
     const change = Number((newValue - oldValue).toFixed(4));
 
-    // Hide tiny changes so the map is not too noisy.
+    // Hide tiny changes so the change map is not too noisy.
     if (Math.abs(change) < 0.025) return;
 
     features.push({
@@ -414,8 +433,10 @@ function setupCompareYearSwitch() {
       compareBaseYear = button.dataset.compareYear;
 
       if (currentMode === "compare") {
-        const detail = detailFromZoom(leftMap.getZoom());
+        const detail = detailFromZoom(leftMap.getZoom(), activeView);
         const data = await getGeoJSON(compareBaseYear, detail);
+
+        currentDetail = detail;
 
         if (leftMap.getSource("spikes")) {
           leftMap.getSource("spikes").setData(data);
@@ -425,16 +446,24 @@ function setupCompareYearSwitch() {
   });
 }
 
+function getVisibleCamera() {
+  if (currentMode === "compare") {
+    return getCurrentCamera(leftMap);
+  }
+
+  return getCurrentCamera(singleMap);
+}
+
 async function setMode(mode) {
+  const previousCamera = getVisibleCamera();
+
   currentMode = mode;
 
   document.body.classList.remove("mode-compare", "mode-present", "mode-change");
   document.body.classList.add(`mode-${mode}`);
 
   if (mode === "compare") {
-    const view = getCurrentCamera(singleMap) || views[activeView];
-    const detail = detailFromZoom(view.zoom);
-
+    const detail = detailFromZoom(previousCamera.zoom, activeView);
     currentDetail = detail;
 
     const leftData = await getGeoJSON(compareBaseYear, detail);
@@ -450,12 +479,13 @@ async function setMode(mode) {
       rightMap.setPaintProperty("spikes-layer", "fill-extrusion-opacity", 0.65);
     }
 
-    jumpMapTo(leftMap, view);
-    jumpMapTo(rightMap, view);
+    // Important: copy the current camera instead of flying from an old view
+    jumpMapTo(leftMap, previousCamera);
+    jumpMapTo(rightMap, previousCamera);
   }
 
   if (mode === "present") {
-    const detail = detailFromZoom(singleMap.getZoom());
+    const detail = detailFromZoom(previousCamera.zoom, activeView);
     currentDetail = detail;
 
     const data2025 = await getGeoJSON("2025", detail);
@@ -470,11 +500,12 @@ async function setMode(mode) {
       singleMap.setLayoutProperty("change-spikes-layer", "visibility", "none");
     }
 
-    mapFlyTo(singleMap, views[activeView]);
+    // Important: no flyTo here
+    jumpMapTo(singleMap, previousCamera);
   }
 
   if (mode === "change") {
-    const detail = detailFromZoom(singleMap.getZoom());
+    const detail = detailFromZoom(previousCamera.zoom, activeView);
     currentDetail = detail;
 
     const data2000 = await getGeoJSON("2000", detail);
@@ -493,7 +524,8 @@ async function setMode(mode) {
       singleMap.setLayoutProperty("change-spikes-layer", "visibility", "visible");
     }
 
-    mapFlyTo(singleMap, views[activeView]);
+    // Important: no flyTo here
+    jumpMapTo(singleMap, previousCamera);
   }
 
   resizeMaps();
@@ -504,12 +536,12 @@ function setupRegionJump() {
 
   if (!select) return;
 
-  select.addEventListener("change", () => {
+  select.addEventListener("change", async () => {
     const viewName = select.value;
 
     activeView = viewName;
     updateStoryPanel(viewName);
-    flyAllTo(viewName);
+    await flyAllTo(viewName);
   });
 }
 
@@ -522,17 +554,21 @@ function updateStoryPanel(viewName) {
   document.querySelector("#story-text").textContent = story.text;
 }
 
-function flyAllTo(viewName) {
+async function flyAllTo(viewName) {
   const view = views[viewName];
 
   if (!view) return;
 
+  // Move the camera immediately using currently visible data.
   if (currentMode === "compare") {
     mapFlyTo(leftMap, view);
     mapFlyTo(rightMap, view);
   } else {
     mapFlyTo(singleMap, view);
   }
+
+  // Load the better detail level after the camera starts moving.
+  await loadDetailForCurrentView(viewName, view);
 }
 
 function mapFlyTo(map, view) {
@@ -541,7 +577,9 @@ function mapFlyTo(map, view) {
     zoom: view.zoom,
     pitch: view.pitch,
     bearing: view.bearing,
-    duration: 1300,
+    duration: 3500,
+    speed: 0.35,
+    curve: 1.6,
     essential: true
   });
 }
@@ -620,7 +658,6 @@ function setupPopup(map) {
       .setHTML(`
         <strong>Vegetation intensity</strong><br/>
         ${ndviText}<br/>
-        Detail: ${props.detail ?? "unknown"}<br/>
         Height: ${Math.round(Number(props.height))}
       `)
       .addTo(map);
