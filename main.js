@@ -2,9 +2,9 @@ mapboxgl.accessToken = "pk.eyJ1IjoieXV0YW9saW4iLCJhIjoiY21wNWI0MDl5MDlldTJwcTI3b
 
 const views = {
   global: {
-    center: [10, 18],
-    zoom: 1.15,
-    pitch: 54,
+    center: [15, 8],
+    zoom: 1.5,
+    pitch: 25,
     bearing: 0
   },
   amazon: {
@@ -80,13 +80,7 @@ const mapOptions = {
   bearing: views.global.bearing,
   antialias: true,
   projection: "mercator",
-
-  // Allow the world to repeat horizontally
-  renderWorldCopies: true,
-
-  // Do not lock the map to -180 / 180 longitude
-  // This allows seamless horizontal panning
-  maxBounds: null
+  renderWorldCopies: true
 };
 
 const singleMap = new mapboxgl.Map({
@@ -173,6 +167,10 @@ async function initAllMaps() {
 
   updateStoryPanel("global");
   await setMode("present");
+
+  // Force the corrected global start view after mode setup
+  jumpMapTo(singleMap, views.global);
+
   resizeMaps();
 
   // Preload medium data shortly after initial render.
