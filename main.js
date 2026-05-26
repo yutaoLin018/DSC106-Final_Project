@@ -29,31 +29,47 @@ const views = {
 
 const storyText = {
   global: {
-    title: "Global Overview",
-    text: "Placeholder text: introduce the overall story and the main question here."
+    title: "Global Vegetation Change",
+    text: "This map uses MODIS NDVI data to show how vegetation has changed across the world. Green spikes represent areas where vegetation increased between 2000 and 2025, while orange spikes represent areas where vegetation declined. Taller spikes indicate larger changes."
   },
   amazon: {
     title: "Amazon Basin",
-    text: "Placeholder text: describe why this region matters and what users should notice."
+    text: "The Amazon region is one of the most important areas to examine because it contains large tropical forests and zones of land-use change. The change layer helps highlight where vegetation appears to have declined or shifted over time."
   },
   sahel: {
     title: "Sahel / West Africa",
-    text: "Placeholder text: describe why this region matters and what users should notice."
+    text: "The Sahel sits between the Sahara Desert and the greener regions of West Africa. This area is useful for studying vegetation recovery, drought stress, and changing dryland conditions across time."
   },
   china: {
     title: "Northern China / Inner Mongolia",
-    text: "Placeholder text: describe why this region matters and what users should notice."
+    text: "Northern China and Inner Mongolia are included because this region has experienced major land restoration and anti-desertification efforts. The map can help show where vegetation has expanded or declined near dryland and grassland areas."
   }
 };
 
-const spikeFiles = {
-  "2000": "data/actual_ndvi_spikes_2000.geojson",
-  "2013": "data/actual_ndvi_spikes_2013.geojson",
-  "2025": "data/actual_ndvi_spikes_2025.geojson"
+const spikeFilesByDetail = {
+  "2000": {
+    low: "data/actual_ndvi_spikes_2000_low.geojson",
+    medium: "data/actual_ndvi_spikes_2000_medium.geojson",
+    high: "data/actual_ndvi_spikes_2000_high.geojson"
+  },
+  "2013": {
+    low: "data/actual_ndvi_spikes_2013_low.geojson",
+    medium: "data/actual_ndvi_spikes_2013_medium.geojson",
+    high: "data/actual_ndvi_spikes_2013_high.geojson"
+  },
+  "2025": {
+    low: "data/actual_ndvi_spikes_2025_low.geojson",
+    medium: "data/actual_ndvi_spikes_2025_medium.geojson",
+    high: "data/actual_ndvi_spikes_2025_high.geojson"
+  }
 };
 
 let currentMode = "present";
 let activeView = "global";
+let compareBaseYear = "2000";
+let currentDetail = "low";
+let cachedData = {};
+let syncing = false;
 
 const mapOptions = {
   style: "mapbox://styles/mapbox/light-v11",
@@ -99,8 +115,11 @@ function waitForMapLoad(map) {
 }
 
 async function initAllMaps() {
-  const data2000 = await loadGeoJSON(spikeFiles["2000"]);
-  const data2025 = await loadGeoJSON(spikeFiles["2025"]);
+  const initialDetail = "low";
+
+  const data2000 = await getGeoJSON("2000", initialDetail);
+  const data2025 = await getGeoJSON("2025", initialDetail);
+
   const changeData = buildChangeGeoJSON(data2000, data2025);
 
   setupMapLayer(singleMap, data2025, "present");
@@ -123,16 +142,16 @@ async function initAllMaps() {
       "fill-extrusion-color": [
         "case",
         [">", ["get", "change"], 0],
-        "#249971",
-        "#d95f3d"
+        "#2ca25f",
+        "#e76f51"
       ],
       "fill-extrusion-height": [
-        "*",
-        ["abs", ["get", "change"]],
-        850000
+        "min",
+        ["*", ["abs", ["get", "change"]], 320000],
+        65000
       ],
       "fill-extrusion-base": 0,
-      "fill-extrusion-opacity": 0.9,
+      "fill-extrusion-opacity": 0.72,
       "fill-extrusion-vertical-gradient": false,
       "fill-extrusion-emissive-strength": 1,
       "fill-extrusion-ambient-occlusion-intensity": 0,
@@ -141,11 +160,13 @@ async function initAllMaps() {
   });
 
   setupTopTabs();
+  setupCompareYearSwitch();
   setupRegionJump();
   setupPopup(singleMap);
   setupPopup(leftMap);
   setupPopup(rightMap);
   syncCompareMaps();
+  setupDetailSwitching();
 
   updateStoryPanel("global");
   setMode("present");
@@ -197,6 +218,22 @@ function getSpikePaint(mode) {
   };
 }
 
+function detailFromZoom(zoom) {
+  if (zoom >= 6.0) return "high";
+  if (zoom >= 4.0) return "medium";
+  return "low";
+}
+
+async function getGeoJSON(year, detail) {
+  const key = `${year}-${detail}`;
+
+  if (!cachedData[key]) {
+    cachedData[key] = await loadGeoJSON(spikeFilesByDetail[year][detail]);
+  }
+
+  return cachedData[key];
+}
+
 async function loadGeoJSON(path) {
   const response = await fetch(path);
 
@@ -207,32 +244,108 @@ async function loadGeoJSON(path) {
   return await response.json();
 }
 
-function buildChangeGeoJSON(data2000, data2025) {
+function setupDetailSwitching() {
+  singleMap.on("zoomend", async () => {
+    if (currentMode === "present") {
+      await updatePresentDetail();
+    }
+
+    if (currentMode === "change") {
+      await updateChangeDetail();
+    }
+  });
+
+  leftMap.on("zoomend", async () => {
+    if (currentMode === "compare") {
+      await updateCompareDetail(leftMap.getZoom());
+    }
+  });
+
+  rightMap.on("zoomend", async () => {
+    if (currentMode === "compare") {
+      await updateCompareDetail(rightMap.getZoom());
+    }
+  });
+}
+
+async function updatePresentDetail() {
+  const detail = detailFromZoom(singleMap.getZoom());
+
+  if (detail === currentDetail) return;
+
+  currentDetail = detail;
+
+  const data2025 = await getGeoJSON("2025", detail);
+
+  if (singleMap.getSource("spikes")) {
+    singleMap.getSource("spikes").setData(data2025);
+  }
+}
+
+async function updateCompareDetail(zoom) {
+  const detail = detailFromZoom(zoom);
+
+  if (detail === currentDetail) return;
+
+  currentDetail = detail;
+
+  const leftData = await getGeoJSON(compareBaseYear, detail);
+  const rightData = await getGeoJSON("2025", detail);
+
+  if (leftMap.getSource("spikes")) {
+    leftMap.getSource("spikes").setData(leftData);
+  }
+
+  if (rightMap.getSource("spikes")) {
+    rightMap.getSource("spikes").setData(rightData);
+  }
+}
+
+async function updateChangeDetail() {
+  const detail = detailFromZoom(singleMap.getZoom());
+
+  if (detail === currentDetail) return;
+
+  currentDetail = detail;
+
+  const data2000 = await getGeoJSON("2000", detail);
+  const data2025 = await getGeoJSON("2025", detail);
+  const changeData = buildChangeGeoJSON(data2000, data2025);
+
+  if (singleMap.getSource("change-spikes")) {
+    singleMap.getSource("change-spikes").setData(changeData);
+  }
+}
+
+function buildChangeGeoJSON(dataOld, dataNew) {
   const byLocation = new Map();
 
-  data2000.features.forEach(feature => {
+  dataOld.features.forEach(feature => {
     const key = cellKey(feature);
-    byLocation.set(key, Number(feature.properties.greenness));
+    byLocation.set(key, Number(feature.properties.ndvi ?? feature.properties.greenness));
   });
 
   const features = [];
 
-  data2025.features.forEach(feature => {
+  dataNew.features.forEach(feature => {
     const key = cellKey(feature);
     const oldValue = byLocation.get(key);
 
     if (oldValue === undefined) return;
 
-    const newValue = Number(feature.properties.greenness);
+    const newValue = Number(feature.properties.ndvi ?? feature.properties.greenness);
     const change = Number((newValue - oldValue).toFixed(4));
+
+    // Hide tiny changes so the map is not too noisy.
+    if (Math.abs(change) < 0.025) return;
 
     features.push({
       type: "Feature",
-      geometry: feature.geometry,
+      geometry: shrinkPolygon(feature.geometry, 0.55),
       properties: {
         change,
-        greenness_2000: oldValue,
-        greenness_2025: newValue
+        ndvi_old: oldValue,
+        ndvi_new: newValue
       }
     });
   });
@@ -240,6 +353,23 @@ function buildChangeGeoJSON(data2000, data2025) {
   return {
     type: "FeatureCollection",
     features
+  };
+}
+
+function shrinkPolygon(geometry, scale = 0.55) {
+  const ring = geometry.coordinates[0];
+
+  const centerLon = ring.reduce((sum, p) => sum + p[0], 0) / ring.length;
+  const centerLat = ring.reduce((sum, p) => sum + p[1], 0) / ring.length;
+
+  const newRing = ring.map(([lon, lat]) => [
+    centerLon + (lon - centerLon) * scale,
+    centerLat + (lat - centerLat) * scale
+  ]);
+
+  return {
+    type: "Polygon",
+    coordinates: [newRing]
   };
 }
 
@@ -264,16 +394,38 @@ function setupTopTabs() {
   const tabs = document.querySelectorAll(".compare-tab");
 
   tabs.forEach(tab => {
-    tab.addEventListener("click", () => {
+    tab.addEventListener("click", async () => {
       tabs.forEach(t => t.classList.remove("selected"));
       tab.classList.add("selected");
 
-      setMode(tab.dataset.mode);
+      await setMode(tab.dataset.mode);
     });
   });
 }
 
-function setMode(mode) {
+function setupCompareYearSwitch() {
+  const buttons = document.querySelectorAll(".compare-year-option");
+
+  buttons.forEach(button => {
+    button.addEventListener("click", async () => {
+      buttons.forEach(btn => btn.classList.remove("selected"));
+      button.classList.add("selected");
+
+      compareBaseYear = button.dataset.compareYear;
+
+      if (currentMode === "compare") {
+        const detail = detailFromZoom(leftMap.getZoom());
+        const data = await getGeoJSON(compareBaseYear, detail);
+
+        if (leftMap.getSource("spikes")) {
+          leftMap.getSource("spikes").setData(data);
+        }
+      }
+    });
+  });
+}
+
+async function setMode(mode) {
   currentMode = mode;
 
   document.body.classList.remove("mode-compare", "mode-present", "mode-change");
@@ -281,21 +433,35 @@ function setMode(mode) {
 
   if (mode === "compare") {
     const view = getCurrentCamera(singleMap) || views[activeView];
+    const detail = detailFromZoom(view.zoom);
 
-    jumpMapTo(leftMap, view);
-    jumpMapTo(rightMap, view);
+    currentDetail = detail;
 
-    if (leftMap.getLayer("spikes-layer")) {
+    const leftData = await getGeoJSON(compareBaseYear, detail);
+    const rightData = await getGeoJSON("2025", detail);
+
+    if (leftMap.getSource("spikes")) {
+      leftMap.getSource("spikes").setData(leftData);
       leftMap.setPaintProperty("spikes-layer", "fill-extrusion-opacity", 0.65);
     }
 
-    if (rightMap.getLayer("spikes-layer")) {
+    if (rightMap.getSource("spikes")) {
+      rightMap.getSource("spikes").setData(rightData);
       rightMap.setPaintProperty("spikes-layer", "fill-extrusion-opacity", 0.65);
     }
+
+    jumpMapTo(leftMap, view);
+    jumpMapTo(rightMap, view);
   }
 
   if (mode === "present") {
-    if (singleMap.getLayer("spikes-layer")) {
+    const detail = detailFromZoom(singleMap.getZoom());
+    currentDetail = detail;
+
+    const data2025 = await getGeoJSON("2025", detail);
+
+    if (singleMap.getSource("spikes")) {
+      singleMap.getSource("spikes").setData(data2025);
       singleMap.setLayoutProperty("spikes-layer", "visibility", "visible");
       singleMap.setPaintProperty("spikes-layer", "fill-extrusion-opacity", 0.92);
     }
@@ -308,6 +474,17 @@ function setMode(mode) {
   }
 
   if (mode === "change") {
+    const detail = detailFromZoom(singleMap.getZoom());
+    currentDetail = detail;
+
+    const data2000 = await getGeoJSON("2000", detail);
+    const data2025 = await getGeoJSON("2025", detail);
+    const changeData = buildChangeGeoJSON(data2000, data2025);
+
+    if (singleMap.getSource("change-spikes")) {
+      singleMap.getSource("change-spikes").setData(changeData);
+    }
+
     if (singleMap.getLayer("spikes-layer")) {
       singleMap.setLayoutProperty("spikes-layer", "visibility", "none");
     }
@@ -390,8 +567,6 @@ function getCurrentCamera(map) {
 }
 
 function syncCompareMaps() {
-  let syncing = false;
-
   function sync(sourceMap, targetMap) {
     if (syncing) return;
 
@@ -435,11 +610,17 @@ function setupPopup(map) {
 
     map.getCanvas().style.cursor = "pointer";
 
+    const ndviText =
+      props.ndvi !== undefined
+        ? `Actual NDVI: ${Number(props.ndvi).toFixed(3)}`
+        : `Greenness: ${Number(props.greenness).toFixed(3)}`;
+
     popup
       .setLngLat(event.lngLat)
       .setHTML(`
         <strong>Vegetation intensity</strong><br/>
-        Actual NDVI: ${Number(props.ndvi).toFixed(3)}<br/>
+        ${ndviText}<br/>
+        Detail: ${props.detail ?? "unknown"}<br/>
         Height: ${Math.round(Number(props.height))}
       `)
       .addTo(map);

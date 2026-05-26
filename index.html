@@ -23,19 +23,20 @@
 
     <nav class="compare-tabs">
       <button class="compare-tab" data-mode="compare">
-        Compare to 2000
+        Compare
+        <small>2000 / 2013 vs. 2025</small>
       </button>
 
       <button class="compare-tab selected" data-mode="present">
         Vegetation 2025
-        <small>Latest prototype layer</small>
+        <small>Latest MODIS NDVI layer</small>
       </button>
 
       <button class="compare-tab" data-mode="change">
         Show change, 2000–2025
         <small>
-          <span class="decline-dot">■</span> Decline vs.
-          <span class="growth-dot">■</span> Growth
+          <span class="decline-dot">■</span> Vegetation decline&nbsp;&nbsp;
+          <span class="growth-dot">■</span> Vegetation growth
         </small>
       </button>
     </nav>
@@ -60,16 +61,26 @@
 
       <div class="split-line"></div>
 
-      <div class="year-labels">
-        <span>2000</span>
-        <span>2025</span>
+      <div class="compare-switch">
+        <div class="compare-year-stack">
+          <button class="compare-year-option selected" data-compare-year="2000">
+            2000
+          </button>
+          <button class="compare-year-option" data-compare-year="2013">
+            2013
+          </button>
+        </div>
+
+        <span class="compare-current-year">2025</span>
       </div>
     </div>
 
     <section class="story-panel">
-      <h2 id="story-title">Global Overview</h2>
+      <h2 id="story-title">Global Vegetation Change</h2>
       <p id="story-text">
-        Placeholder text: introduce the overall story and the main question here.
+        Explore where Earth has become greener or less green using MODIS NDVI
+        satellite data. Spike height shows vegetation intensity or change,
+        while color separates growth from decline.
       </p>
     </section>
   </main>

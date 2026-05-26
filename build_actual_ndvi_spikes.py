@@ -17,21 +17,22 @@ FILES = {
     "2025": RAW_DIR / "MOD13A3_NDVI_2025.tif",
 }
 
-# Bigger number = fewer spikes, faster webpage
-# Try 6 first. If too slow, use 8 or 10.
-BLOCK_SIZE = 120
+# Level of detail files:
+# low    = used for global view
+# medium = used for regional view
+# high   = used only when zoomed in
+DETAIL_LEVELS = {
+    "low": 80,
+    "medium": 40,
+    "high": 35,
+}
 
-# Smaller number = thinner spike footprints
-CELL_FILL = 0.75
-
-# Height scale for actual NDVI values
-HEIGHT_SCALE = 750000
-
-# Makes high vegetation stand out more
-HEIGHT_POWER = 2.2
-
-# Keep barren areas visible but short
-MIN_VISIBLE_HEIGHT = 1500
+# Smaller = more space between cells
+CELL_FILL_BY_DETAIL = {
+    "low": 0.60,
+    "medium": 0.40,
+    "high": 0.35,
+}
 
 # Valid MODIS NDVI range after scale factor
 NDVI_MIN = -0.2
@@ -70,9 +71,11 @@ def read_ndvi_tif(path):
     # MOD13A3 NDVI is usually stored as scaled integer.
     # Scale factor is 0.0001.
     finite = arr[np.isfinite(arr)]
+
     if finite.size > 0 and np.nanmax(np.abs(finite)) > 2:
         arr = arr * 0.0001
 
+    # Remove invalid NDVI values.
     arr[(arr < NDVI_MIN) | (arr > NDVI_MAX)] = np.nan
 
     return arr, transform
@@ -92,75 +95,99 @@ def block_mean(arr, row, col, block_size):
     return float(np.nanmean(finite))
 
 
-def ndvi_to_height(ndvi):
+def ndvi_to_display_value(ndvi, p05, p95):
     """
-    Convert actual NDVI to spike height.
-
-    Low NDVI stays short but visible.
-    High NDVI gets exaggerated so green areas stand out.
+    Convert actual NDVI into a 0–1 display value using percentile stretching.
+    This improves visual contrast compared with raw NDVI.
     """
-    # Normalize NDVI from roughly -0.1 to 0.9 into 0-1
-    normalized = (ndvi - 0.0) / 0.85
-    normalized = clamp(normalized, 0, 1)
-
-    if normalized < 0.12:
-        return MIN_VISIBLE_HEIGHT + normalized * 10000
-
-    return MIN_VISIBLE_HEIGHT + (normalized ** HEIGHT_POWER) * HEIGHT_SCALE
+    norm = (ndvi - p05) / (p95 - p05 + 1e-9)
+    return clamp(norm, 0, 1)
 
 
-def ndvi_to_display_value(ndvi):
+def ndvi_to_height(ndvi, p05, p95):
     """
-    This value is used for Mapbox color interpolation.
+    Stronger visual contrast:
+    - very low NDVI stays almost flat
+    - moderate NDVI becomes medium height
+    - high NDVI becomes clearly tall
     """
-    normalized = (ndvi - 0.0) / 0.85
-    return clamp(normalized, 0, 1)
+    norm = ndvi_to_display_value(ndvi, p05, p95)
+
+    if norm < 0.15:
+        return 300
+
+    if norm < 0.35:
+        return 1200 + ((norm - 0.15) / 0.20) * 8000
+
+    return 9000 + (norm ** 2.1) * 650000
 
 
-def convert_one_year(year, tif_path):
+def convert_one_year_detail(year, tif_path, detail_name, block_size):
     if not tif_path.exists():
         raise FileNotFoundError(f"Missing file: {tif_path}")
 
-    print(f"Reading {year}: {tif_path}")
+    print(f"Reading {year} / {detail_name}: {tif_path}")
     arr, transform = read_ndvi_tif(tif_path)
+
+    valid = arr[np.isfinite(arr)]
+    valid = valid[(valid >= -0.05) & (valid <= 1.0)]
+
+    if valid.size == 0:
+        raise ValueError(f"No valid NDVI values found for {year}")
+
+    p05 = np.percentile(valid, 5)
+    p95 = np.percentile(valid, 95)
+
+    print(f"{year} {detail_name} NDVI stretch: p05={p05:.3f}, p95={p95:.3f}")
 
     nrows, ncols = arr.shape
 
-    # Estimate cell size in lon/lat from transform.
-    lon_size = abs(transform.a) * BLOCK_SIZE * CELL_FILL
-    lat_size = abs(transform.e) * BLOCK_SIZE * CELL_FILL
+    cell_fill = CELL_FILL_BY_DETAIL[detail_name]
+
+    lon_size = abs(transform.a) * block_size * cell_fill
+    lat_size = abs(transform.e) * block_size * cell_fill
 
     features = []
 
-    for row in range(0, nrows, BLOCK_SIZE):
-        for col in range(0, ncols, BLOCK_SIZE):
-            ndvi = block_mean(arr, row, col, BLOCK_SIZE)
+    for row in range(0, nrows, block_size):
+        for col in range(0, ncols, block_size):
+            ndvi = block_mean(arr, row, col, block_size)
 
             if not np.isfinite(ndvi):
                 continue
 
             # Skip mostly water / invalid negative values.
-            # Keep deserts and barren land because NDVI near 0 is meaningful.
+            # Keep barren land near zero because it is meaningful.
             if ndvi < -0.05:
                 continue
 
             lon, lat = xy(
                 transform,
-                row + BLOCK_SIZE / 2,
-                col + BLOCK_SIZE / 2,
+                row + block_size / 2,
+                col + block_size / 2,
                 offset="center"
             )
 
             lon = float(lon)
             lat = float(lat)
 
-            height = ndvi_to_height(ndvi)
-            greenness = ndvi_to_display_value(ndvi)
+            # Keep only valid Mapbox coordinates.
+            if not (-180 <= lon <= 180 and -90 <= lat <= 90):
+                continue
+
+            # Match the map extent used in the website.
+            if lat < -60 or lat > 85:
+                continue
+
+            greenness = ndvi_to_display_value(ndvi, p05, p95)
+            height = ndvi_to_height(ndvi, p05, p95)
 
             features.append({
                 "type": "Feature",
                 "properties": {
                     "year": int(year),
+                    "detail": detail_name,
+                    "block_size": int(block_size),
                     "ndvi": round(float(ndvi), 5),
                     "greenness": round(float(greenness), 5),
                     "height": round(float(height), 2)
@@ -178,7 +205,7 @@ def convert_one_year(year, tif_path):
         "features": features
     }
 
-    out_path = OUT_DIR / f"actual_ndvi_spikes_{year}.geojson"
+    out_path = OUT_DIR / f"actual_ndvi_spikes_{year}_{detail_name}.geojson"
 
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(geojson, f)
@@ -188,7 +215,8 @@ def convert_one_year(year, tif_path):
 
 def main():
     for year, path in FILES.items():
-        convert_one_year(year, path)
+        for detail_name, block_size in DETAIL_LEVELS.items():
+            convert_one_year_detail(year, path, detail_name, block_size)
 
 
 if __name__ == "__main__":
