@@ -1,0 +1,8 @@
+# Raw MODIS GeoTIFF data
+actual_modis_ndvi_raw/
+*.tif
+*.tiff
+
+# Python cache
+__pycache__/
+*.pyc

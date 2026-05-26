@@ -47,9 +47,9 @@ const storyText = {
 };
 
 const spikeFiles = {
-  "2000": "data/modis_spikes_2000.geojson",
-  "2013": "data/modis_spikes_2013.geojson",
-  "2025": "data/modis_spikes_2025.geojson"
+  "2000": "data/actual_ndvi_spikes_2000.geojson",
+  "2013": "data/actual_ndvi_spikes_2013.geojson",
+  "2025": "data/actual_ndvi_spikes_2025.geojson"
 };
 
 let currentMode = "present";
@@ -439,7 +439,7 @@ function setupPopup(map) {
       .setLngLat(event.lngLat)
       .setHTML(`
         <strong>Vegetation intensity</strong><br/>
-        Approx. greenness: ${Number(props.greenness).toFixed(3)}<br/>
+        Actual NDVI: ${Number(props.ndvi).toFixed(3)}<br/>
         Height: ${Math.round(Number(props.height))}
       `)
       .addTo(map);
@@ -462,7 +462,7 @@ function setupPopup(map) {
       popup
         .setLngLat(event.lngLat)
         .setHTML(`
-          <strong>Change, 2000–2025</strong><br/>
+          <strong>NDVI Change, 2000–2025</strong><br/>
           ${change > 0 ? "Growth" : "Decline"}: ${change.toFixed(3)}
         `)
         .addTo(map);
