@@ -2,7 +2,6 @@ from pathlib import Path
 import json
 import numpy as np
 import rasterio
-from rasterio.transform import xy
 
 # -----------------------------
 # CONFIG
@@ -18,21 +17,20 @@ FILES = {
 }
 
 # Level of detail files:
-# low    = used for global view
-# medium = used for regional view
-# high   = used only when zoomed in
+# low    = global view
+# medium = region view
+# high   = zoomed-in view
 DETAIL_LEVELS = {
     "low": 80,
     "medium": 40,
     "high": 35,
 }
 
-# Smaller = more space between cells
-CELL_FILL_BY_DETAIL = {
-    "low": 0.60,
-    "medium": 0.40,
-    "high": 0.35,
-}
+# Small overlap to hide white seams between adjacent blocks.
+# 0.000 = exact edges
+# 0.001 = tiny overlap, usually best
+# 0.005 = stronger overlap
+BLOCK_PAD = 0.001
 
 # Valid MODIS NDVI range after scale factor
 NDVI_MIN = -0.2
@@ -43,20 +41,56 @@ def clamp(value, low, high):
     return max(low, min(high, value))
 
 
-def make_cell_polygon(lon_center, lat_center, lon_size, lat_size):
-    half_lon = lon_size / 2
-    half_lat = lat_size / 2
+def make_block_polygon(transform, row_start, col_start, row_end, col_end, pad=0.001):
+    """
+    Build polygon from exact raster block boundaries.
+
+    This makes adjacent blocks touch cleanly instead of leaving gaps caused by
+    center-point sizing.
+    """
+    x_left, y_top = transform * (col_start, row_start)
+    x_right, y_bottom = transform * (col_end, row_end)
+
+    west = min(x_left, x_right)
+    east = max(x_left, x_right)
+    south = min(y_top, y_bottom)
+    north = max(y_top, y_bottom)
+
+    # Tiny expansion to avoid visible rendering seams in Mapbox.
+    if pad > 0:
+        cx = (west + east) / 2
+        cy = (south + north) / 2
+        half_w = (east - west) / 2 * (1 + pad)
+        half_h = (north - south) / 2 * (1 + pad)
+
+        west = cx - half_w
+        east = cx + half_w
+        south = cy - half_h
+        north = cy + half_h
 
     return {
         "type": "Polygon",
         "coordinates": [[
-            [lon_center - half_lon, lat_center - half_lat],
-            [lon_center + half_lon, lat_center - half_lat],
-            [lon_center + half_lon, lat_center + half_lat],
-            [lon_center - half_lon, lat_center + half_lat],
-            [lon_center - half_lon, lat_center - half_lat],
+            [west, south],
+            [east, south],
+            [east, north],
+            [west, north],
+            [west, south],
         ]]
     }
+
+
+def polygon_center(geometry):
+    """
+    Get center of a rectangular polygon.
+    Used only for coordinate validation.
+    """
+    coords = geometry["coordinates"][0]
+
+    lons = [p[0] for p in coords]
+    lats = [p[1] for p in coords]
+
+    return sum(lons) / len(lons), sum(lats) / len(lats)
 
 
 def read_ndvi_tif(path):
@@ -141,16 +175,13 @@ def convert_one_year_detail(year, tif_path, detail_name, block_size):
     print(f"{year} {detail_name} NDVI stretch: p05={p05:.3f}, p95={p95:.3f}")
 
     nrows, ncols = arr.shape
-
-    cell_fill = CELL_FILL_BY_DETAIL[detail_name]
-
-    lon_size = abs(transform.a) * block_size * cell_fill
-    lat_size = abs(transform.e) * block_size * cell_fill
-
     features = []
 
     for row in range(0, nrows, block_size):
         for col in range(0, ncols, block_size):
+            row_end = min(row + block_size, nrows)
+            col_end = min(col + block_size, ncols)
+
             ndvi = block_mean(arr, row, col, block_size)
 
             if not np.isfinite(ndvi):
@@ -161,15 +192,16 @@ def convert_one_year_detail(year, tif_path, detail_name, block_size):
             if ndvi < -0.05:
                 continue
 
-            lon, lat = xy(
+            geometry = make_block_polygon(
                 transform,
-                row + block_size / 2,
-                col + block_size / 2,
-                offset="center"
+                row,
+                col,
+                row_end,
+                col_end,
+                pad=BLOCK_PAD
             )
 
-            lon = float(lon)
-            lat = float(lat)
+            lon, lat = polygon_center(geometry)
 
             # Keep only valid Mapbox coordinates.
             if not (-180 <= lon <= 180 and -90 <= lat <= 90):
@@ -185,19 +217,11 @@ def convert_one_year_detail(year, tif_path, detail_name, block_size):
             features.append({
                 "type": "Feature",
                 "properties": {
-                    "year": int(year),
-                    "detail": detail_name,
-                    "block_size": int(block_size),
                     "ndvi": round(float(ndvi), 5),
                     "greenness": round(float(greenness), 5),
                     "height": round(float(height), 2)
                 },
-                "geometry": make_cell_polygon(
-                    lon,
-                    lat,
-                    lon_size,
-                    lat_size
-                )
+                "geometry": geometry
             })
 
     geojson = {
