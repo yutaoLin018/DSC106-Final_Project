@@ -80,11 +80,13 @@ const mapOptions = {
   bearing: views.global.bearing,
   antialias: true,
   projection: "mercator",
-  renderWorldCopies: false,
-  maxBounds: [
-    [-180, -60],
-    [180, 85]
-  ]
+
+  // Allow the world to repeat horizontally
+  renderWorldCopies: true,
+
+  // Do not lock the map to -180 / 180 longitude
+  // This allows seamless horizontal panning
+  maxBounds: null
 };
 
 const singleMap = new mapboxgl.Map({
@@ -228,12 +230,15 @@ function getSpikePaint(mode) {
 }
 
 function detailFromZoom(zoom, viewName = activeView) {
-  if (zoom >= 7.0) return "high";
+  if (zoom >= 5.8) return "high";
 
-  // Any selected region should use at least medium detail.
-  if (viewName !== "global") return "medium";
+  // Any selected region should use at least medium detail
+  if (viewName !== "global") {
+    if (zoom >= 5.2) return "high";
+    return "medium";
+  }
 
-  if (zoom >= 5.0) return "medium";
+  if (zoom >= 3.6) return "medium";
 
   return "low";
 }
