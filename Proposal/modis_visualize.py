@@ -1,340 +1,396 @@
 from pathlib import Path
-from PIL import Image
+import re
+
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
+from matplotlib.colors import LinearSegmentedColormap
+
+try:
+    import rasterio
+except ImportError:
+    rasterio = None
+
+
+# =========================
+# File Inputs
+# =========================
+
+TIF_FILES = {
+    2000: Path(
+        r"D:\#UCSD\DSC 106\DSC106-Final_Project\actual_modis_ndvi_raw\MOD13A3_NDVI_2000.tif"
+    ),
+    2013: Path(
+        r"D:\#UCSD\DSC 106\DSC106-Final_Project\actual_modis_ndvi_raw\MOD13A3_NDVI_2013.tif"
+    ),
+    2025: Path(
+        r"D:\#UCSD\DSC 106\DSC106-Final_Project\actual_modis_ndvi_raw\MOD13A3_NDVI_2025.tif"
+    ),
+}
+
+BASE_YEAR = 2000
+COMPARE_YEAR = 2025
 
 
 # =========================
 # Settings
 # =========================
 
-IMG_DIR = Path("gibs_modis_images")
 FIG_DIR = Path("figures")
 FIG_DIR.mkdir(exist_ok=True)
 
-YEARS = [2012, 2014, 2016, 2018, 2020, 2023]
+REGIONS = {
+    "Amazon Basin": (-80, -45, -20, 10),
+    "Sahel / West Africa": (-20, 35, 5, 20),
+    "South Asia": (65, 100, 5, 35),
+    "Northern China / Inner Mongolia": (95, 125, 35, 47),
+}
 
 
 # =========================
-# Helper Functions
+# Color Maps
 # =========================
 
-def image_path(year):
-    return IMG_DIR / f"modis_terra_ndvi_{year}_july.png"
+ndvi_cmap = LinearSegmentedColormap.from_list(
+    "modis_ndvi_style",
+    [
+        "#000000",  # water / no vegetation
+        "#d8c7aa",  # barren
+        "#b7d56b",  # sparse vegetation
+        "#69b83f",  # moderate vegetation
+        "#168b25",  # dense vegetation
+        "#005b17",  # very dense vegetation
+    ],
+)
+
+change_cmap = LinearSegmentedColormap.from_list(
+    "ndvi_change_style",
+    [
+        "#8c510a",  # decline
+        "#dfc27d",
+        "#f7f7f7",
+        "#80cdc1",
+        "#01665e",  # growth
+    ],
+)
 
 
-def show_image(path, title, save_path):
-    img = Image.open(path)
+# =========================
+# Helpers
+# =========================
 
-    plt.figure(figsize=(14, 6))
-    plt.imshow(img)
-    plt.axis("off")
-    plt.title(title, fontsize=16)
-    plt.tight_layout()
+def parse_year_from_path(path):
+    match = re.search(r"(19|20)\d{2}", Path(path).name)
+    return int(match.group(0)) if match else None
+
+
+def clamp(value, low, high):
+    return max(low, min(high, value))
+
+
+def read_ndvi_tif(path):
+    if rasterio is None:
+        raise ImportError(
+            "rasterio is required. Install with: conda install -c conda-forge rasterio"
+        )
+
+    path = Path(path)
+
+    if not path.exists():
+        raise FileNotFoundError(f"Could not find file: {path}")
+
+    with rasterio.open(path) as src:
+        arr = src.read(1).astype("float32")
+        transform = src.transform
+        nodata = src.nodata
+        bounds = src.bounds
+        crs = src.crs
+
+    if nodata is not None:
+        arr[arr == nodata] = np.nan
+
+    finite = arr[np.isfinite(arr)]
+
+    # MOD13A3 NDVI usually uses scale factor 0.0001.
+    if finite.size > 0 and np.nanmax(np.abs(finite)) > 2:
+        arr = arr * 0.0001
+
+    arr[(arr < -0.2) | (arr > 1.0)] = np.nan
+
+    return {
+        "path": path,
+        "year": parse_year_from_path(path),
+        "arr": arr,
+        "transform": transform,
+        "bounds": bounds,
+        "crs": crs,
+        "extent": [bounds.left, bounds.right, bounds.bottom, bounds.top],
+    }
+
+
+def load_all_tifs():
+    data = {}
+
+    for year, path in TIF_FILES.items():
+        print(f"Loading {year}: {path}")
+        data[year] = read_ndvi_tif(path)
+        print(f"  shape: {data[year]['arr'].shape}")
+        print(f"  CRS: {data[year]['crs']}")
+
+    return data
+
+
+def crop_array_by_bbox(data, bbox):
+    arr = data["arr"]
+    transform = data["transform"]
+
+    lon_min, lon_max, lat_min, lat_max = bbox
+
+    inv = ~transform
+
+    col_min, row_max = inv * (lon_min, lat_min)
+    col_max, row_min = inv * (lon_max, lat_max)
+
+    row_min = int(clamp(np.floor(row_min), 0, arr.shape[0] - 1))
+    row_max = int(clamp(np.ceil(row_max), 0, arr.shape[0]))
+    col_min = int(clamp(np.floor(col_min), 0, arr.shape[1] - 1))
+    col_max = int(clamp(np.ceil(col_max), 0, arr.shape[1]))
+
+    if row_max <= row_min or col_max <= col_min:
+        return None
+
+    crop = arr[row_min:row_max, col_min:col_max]
+    extent = [lon_min, lon_max, lat_min, lat_max]
+
+    return crop, extent
+
+
+def savefig(filename):
+    save_path = FIG_DIR / filename
     plt.savefig(save_path, dpi=200, bbox_inches="tight")
     plt.show()
-
     print(f"Saved: {save_path}")
 
 
 # =========================
-# Visualization 1
+# Figure 1
 # Regional zoom comparison
 # =========================
 
-def crop_region(img, region):
-    """
-    Crop an image by approximate lon/lat region.
+def plot_regional_zoom_comparison(data):
+    old_data = data[BASE_YEAR]
+    new_data = data[COMPARE_YEAR]
 
-    region = (lon_min, lon_max, lat_min, lat_max)
-    Image covers:
-      lon: -180 to 180
-      lat: 85 to -60
-    """
-    lon_min, lon_max, lat_min, lat_max = region
+    fig, axes = plt.subplots(len(REGIONS), 2, figsize=(12, 13))
 
-    width, height = img.size
+    for row, (region_name, bbox) in enumerate(REGIONS.items()):
+        old_result = crop_array_by_bbox(old_data, bbox)
+        new_result = crop_array_by_bbox(new_data, bbox)
 
-    x1 = int((lon_min + 180) / 360 * width)
-    x2 = int((lon_max + 180) / 360 * width)
+        if old_result is None or new_result is None:
+            axes[row, 0].set_title(f"{region_name} — no data")
+            axes[row, 1].set_title(f"{region_name} — no data")
+            axes[row, 0].axis("off")
+            axes[row, 1].axis("off")
+            continue
 
-    y1 = int((85 - lat_max) / 145 * height)
-    y2 = int((85 - lat_min) / 145 * height)
+        old_crop, old_extent = old_result
+        new_crop, new_extent = new_result
 
-    return img.crop((x1, y1, x2, y2))
-
-
-def plot_regional_zoom_comparison():
-    img_2012 = Image.open(image_path(2012)).convert("RGB")
-    img_2023 = Image.open(image_path(2023)).convert("RGB")
-
-    regions = {
-        "Amazon Basin": (-80, -45, -20, 10),
-        "Sahel / West Africa": (-20, 35, 5, 20),
-        "South Asia": (65, 100, 5, 35),
-        "Northern China / Inner Mongolia": (95, 125, 35, 47),
-    }
-
-    fig, axes = plt.subplots(len(regions), 2, figsize=(12, 13))
-
-    for row, (region_name, bbox) in enumerate(regions.items()):
-        crop_2012 = crop_region(img_2012, bbox)
-        crop_2023 = crop_region(img_2023, bbox)
-
-        axes[row, 0].imshow(crop_2012)
-        axes[row, 0].set_title(f"{region_name} — July 2012", fontsize=12)
+        axes[row, 0].imshow(
+            old_crop,
+            extent=old_extent,
+            origin="upper",
+            cmap=ndvi_cmap,
+            vmin=-0.05,
+            vmax=0.9,
+        )
+        axes[row, 0].set_title(f"{region_name} — {BASE_YEAR}", fontsize=12)
         axes[row, 0].axis("off")
 
-        axes[row, 1].imshow(crop_2023)
-        axes[row, 1].set_title(f"{region_name} — July 2023", fontsize=12)
+        axes[row, 1].imshow(
+            new_crop,
+            extent=new_extent,
+            origin="upper",
+            cmap=ndvi_cmap,
+            vmin=-0.05,
+            vmax=0.9,
+        )
+        axes[row, 1].set_title(f"{region_name} — {COMPARE_YEAR}", fontsize=12)
         axes[row, 1].axis("off")
 
     fig.suptitle(
-        "Regional MODIS Terra NDVI Comparison: 2012 vs 2023",
-        fontsize=16
+        f"Regional MODIS NDVI Comparison: {BASE_YEAR} vs {COMPARE_YEAR}",
+        fontsize=16,
     )
 
     plt.tight_layout()
-
-    save_path = FIG_DIR / "01_regional_zoom_comparison.png"
-    plt.savefig(save_path, dpi=200, bbox_inches="tight")
-    plt.show()
-
-    print(f"Saved: {save_path}")
+    savefig("01_regional_zoom_comparison.png")
 
 
 # =========================
-# Visualization 2
-# Regional Approximate Greenness Bar Chart
+# Figure 2
+# Regional NDVI bar chart
 # =========================
 
-def compute_green_score(img):
-    """
-    Approximate vegetation strength from rendered RGB image.
-    This is not raw NDVI. It estimates greenness from image color.
-    """
-    arr = np.array(img.convert("RGB")).astype(float)
+def plot_regional_ndvi_bar_chart(data):
+    old_data = data[BASE_YEAR]
+    new_data = data[COMPARE_YEAR]
 
-    r = arr[:, :, 0]
-    g = arr[:, :, 1]
-    b = arr[:, :, 2]
-
-    green_score = g - (r + b) / 2
-    green_score = np.maximum(green_score, 0)
-
-    # Remove mostly black ocean/background pixels
-    brightness = (r + g + b) / 3
-    land_mask = brightness > 10
-
-    green_score = green_score[land_mask]
-
-    return green_score
-
-
-def plot_regional_greenness_bar_chart():
-    img_2012 = Image.open(image_path(2012)).convert("RGB")
-    img_2023 = Image.open(image_path(2023)).convert("RGB")
-
-    regions = {
-        "Amazon Basin": (-80, -45, -20, 10),
-        "Sahel / West Africa": (-20, 35, 5, 20),
-        "South Asia": (65, 100, 5, 35),
-        "Northern China /\nInner Mongolia": (95, 125, 35, 47),
-    }
-
-    values_2012 = []
-    values_2023 = []
     labels = []
+    old_values = []
+    new_values = []
 
-    for region_name, bbox in regions.items():
-        crop_2012 = crop_region(img_2012, bbox)
-        crop_2023 = crop_region(img_2023, bbox)
+    for region_name, bbox in REGIONS.items():
+        old_result = crop_array_by_bbox(old_data, bbox)
+        new_result = crop_array_by_bbox(new_data, bbox)
 
-        green_2012 = compute_green_score(crop_2012)
-        green_2023 = compute_green_score(crop_2023)
+        old_mean = np.nan
+        new_mean = np.nan
 
-        values_2012.append(np.mean(green_2012))
-        values_2023.append(np.mean(green_2023))
+        if old_result is not None:
+            old_crop, _ = old_result
+            old_mean = float(np.nanmean(old_crop))
+
+        if new_result is not None:
+            new_crop, _ = new_result
+            new_mean = float(np.nanmean(new_crop))
+
         labels.append(region_name)
+        old_values.append(old_mean)
+        new_values.append(new_mean)
 
     x = np.arange(len(labels))
     width = 0.35
 
     plt.figure(figsize=(11, 6))
-    plt.bar(x - width / 2, values_2012, width, label="July 2012")
-    plt.bar(x + width / 2, values_2023, width, label="July 2023")
+    plt.bar(x - width / 2, old_values, width, label=str(BASE_YEAR))
+    plt.bar(x + width / 2, new_values, width, label=str(COMPARE_YEAR))
 
-    plt.title("Average Approximate Greenness by Region: 2012 vs 2023", fontsize=15)
+    plt.title(
+        f"Average Actual NDVI by Region: {BASE_YEAR} vs {COMPARE_YEAR}",
+        fontsize=15,
+    )
     plt.xlabel("Region")
-    plt.ylabel("Average approximate greenness")
-    plt.xticks(x, labels)
+    plt.ylabel("Average NDVI")
+    plt.xticks(x, labels, rotation=10, ha="right")
+    plt.ylim(0, 1)
     plt.legend()
     plt.grid(axis="y", alpha=0.25)
-
     plt.tight_layout()
 
-    save_path = FIG_DIR / "02_regional_greenness_bar_chart.png"
-    plt.savefig(save_path, dpi=200, bbox_inches="tight")
-    plt.show()
-
-    print(f"Saved: {save_path}")
+    savefig("02_regional_ndvi_bar_chart.png")
 
 
 # =========================
-# Visualization 3
-# Side-by-side comparison
+# Figure 3
+# Side-by-side world comparison
 # =========================
 
-def plot_side_by_side():
-    img_2012 = Image.open(image_path(2012))
-    img_2023 = Image.open(image_path(2023))
+def plot_side_by_side(data):
+    old_data = data[BASE_YEAR]
+    new_data = data[COMPARE_YEAR]
 
     fig, axes = plt.subplots(1, 2, figsize=(18, 7))
 
-    axes[0].imshow(img_2012)
-    axes[0].set_title("July 2012", fontsize=15)
+    axes[0].imshow(
+        old_data["arr"],
+        extent=old_data["extent"],
+        origin="upper",
+        cmap=ndvi_cmap,
+        vmin=-0.05,
+        vmax=0.9,
+    )
+    axes[0].set_title(str(BASE_YEAR), fontsize=15)
     axes[0].axis("off")
 
-    axes[1].imshow(img_2023)
-    axes[1].set_title("July 2023", fontsize=15)
+    axes[1].imshow(
+        new_data["arr"],
+        extent=new_data["extent"],
+        origin="upper",
+        cmap=ndvi_cmap,
+        vmin=-0.05,
+        vmax=0.9,
+    )
+    axes[1].set_title(str(COMPARE_YEAR), fontsize=15)
     axes[1].axis("off")
 
-    fig.suptitle("MODIS Terra Monthly NDVI Comparison: 2012 vs 2023", fontsize=18)
+    fig.suptitle(
+        f"MODIS Terra Monthly NDVI Comparison: {BASE_YEAR} vs {COMPARE_YEAR}",
+        fontsize=18,
+    )
 
     plt.tight_layout()
-
-    save_path = FIG_DIR / "03_side_by_side_2012_2023.png"
-    plt.savefig(save_path, dpi=200, bbox_inches="tight")
-    plt.show()
-
-    print(f"Saved: {save_path}")
+    savefig(f"03_side_by_side_{BASE_YEAR}_{COMPARE_YEAR}.png")
 
 
 # =========================
-# Visualization 4
+# Figure 4
 # Small multiples
 # =========================
 
-def plot_small_multiples():
-    fig, axes = plt.subplots(2, 3, figsize=(18, 9))
+def plot_small_multiples(data):
+    years = sorted(data.keys())
 
-    for ax, year in zip(axes.ravel(), YEARS):
-        img = Image.open(image_path(year))
+    fig, axes = plt.subplots(1, len(years), figsize=(6 * len(years), 5))
 
-        ax.imshow(img)
-        ax.set_title(f"July {year}", fontsize=14)
+    if len(years) == 1:
+        axes = [axes]
+
+    for ax, year in zip(axes, years):
+        ax.imshow(
+            data[year]["arr"],
+            extent=data[year]["extent"],
+            origin="upper",
+            cmap=ndvi_cmap,
+            vmin=-0.05,
+            vmax=0.9,
+        )
+        ax.set_title(str(year), fontsize=14)
         ax.axis("off")
 
     fig.suptitle("MODIS Terra Monthly NDVI Across Selected Years", fontsize=18)
 
     plt.tight_layout()
-
-    save_path = FIG_DIR / "04_small_multiples_modis_terra_ndvi.png"
-    plt.savefig(save_path, dpi=200, bbox_inches="tight")
-    plt.show()
-
-    print(f"Saved: {save_path}")
+    savefig("04_small_multiples_actual_ndvi.png")
 
 
 # =========================
-# Visualization 5
-# Approximate visual difference
+# Figure 5
+# Actual NDVI difference
 # =========================
 
-def plot_visual_difference():
-    img_2012_arr = np.array(
-        Image.open(image_path(2012)).convert("RGB")
-    ).astype(float)
+def plot_actual_ndvi_difference(data):
+    old_data = data[BASE_YEAR]
+    new_data = data[COMPARE_YEAR]
 
-    img_2023_arr = np.array(
-        Image.open(image_path(2023)).convert("RGB")
-    ).astype(float)
+    old_arr = old_data["arr"]
+    new_arr = new_data["arr"]
 
-    diff = img_2023_arr - img_2012_arr
+    if old_arr.shape != new_arr.shape:
+        raise ValueError(
+            f"GeoTIFF shapes do not match: {old_arr.shape} vs {new_arr.shape}"
+        )
 
-    # This is image-color difference, not raw NDVI subtraction
-    diff_mag = np.mean(diff, axis=2)
+    diff = new_arr - old_arr
 
     plt.figure(figsize=(14, 6))
-    plt.imshow(diff_mag, cmap="BrBG")
-    plt.colorbar(label="Approximate rendered-image difference")
+    plt.imshow(
+        diff,
+        extent=new_data["extent"],
+        origin="upper",
+        cmap=change_cmap,
+        vmin=-0.3,
+        vmax=0.3,
+    )
+    plt.colorbar(label=f"Actual NDVI difference ({COMPARE_YEAR} − {BASE_YEAR})")
     plt.axis("off")
     plt.title(
-        "Approximate Visual Difference: MODIS NDVI Imagery 2023 − 2012",
-        fontsize=15
+        f"Actual NDVI Difference: MODIS NDVI {COMPARE_YEAR} − {BASE_YEAR}",
+        fontsize=15,
     )
 
     plt.tight_layout()
-
-    save_path = FIG_DIR / "05_approx_visual_difference_2023_minus_2012.png"
-    plt.savefig(save_path, dpi=200, bbox_inches="tight")
-    plt.show()
-
-    print(f"Saved: {save_path}")
-
-
-# =========================
-# Visualization 6
-# 3D spike map concept
-# =========================
-
-def plot_3d_spike_map():
-    img = Image.open(image_path(2023)).convert("RGB")
-    arr = np.array(img).astype(float)
-
-    # Downsample so the 3D chart is not too heavy
-    step = 30
-    small = arr[::step, ::step, :]
-
-    h, w, _ = small.shape
-
-    r = small[:, :, 0]
-    g = small[:, :, 1]
-    b = small[:, :, 2]
-
-    # Approximate vegetation intensity from green channel
-    green_score = g - (r + b) / 2
-    green_score = np.maximum(green_score, 0)
-
-    if np.nanmax(green_score) > 0:
-        green_score = green_score / np.nanmax(green_score)
-
-    x, y = np.meshgrid(np.arange(w), np.arange(h))
-    z = np.zeros_like(x)
-
-    dz = green_score * 8
-
-    fig = plt.figure(figsize=(14, 8))
-    ax = fig.add_subplot(111, projection="3d")
-
-    ax.bar3d(
-        x.ravel(),
-        y.ravel(),
-        z.ravel(),
-        dx=0.8,
-        dy=0.8,
-        dz=dz.ravel(),
-        shade=True
-    )
-
-    ax.set_title(
-        "3D Spike Map Concept Using MODIS Terra NDVI Imagery",
-        fontsize=15
-    )
-    ax.set_xlabel("Image X")
-    ax.set_ylabel("Image Y")
-    ax.set_zlabel("Approx. vegetation intensity")
-
-    ax.view_init(elev=45, azim=-65)
-
-    plt.tight_layout()
-
-    save_path = FIG_DIR / "06_3d_spike_map_concept.png"
-    plt.savefig(save_path, dpi=200, bbox_inches="tight")
-    plt.show()
-
-    print(f"Saved: {save_path}")
+    savefig(f"05_actual_ndvi_difference_{COMPARE_YEAR}_minus_{BASE_YEAR}.png")
 
 
 # =========================
@@ -342,12 +398,13 @@ def plot_3d_spike_map():
 # =========================
 
 def main():
-    plot_regional_zoom_comparison()
-    plot_regional_greenness_bar_chart()
-    plot_side_by_side()
-    plot_small_multiples()
-    plot_visual_difference()
-    plot_3d_spike_map()
+    data = load_all_tifs()
+
+    plot_regional_zoom_comparison(data)
+    plot_regional_ndvi_bar_chart(data)
+    plot_side_by_side(data)
+    plot_small_multiples(data)
+    plot_actual_ndvi_difference(data)
 
     print("All visualizations complete.")
 
