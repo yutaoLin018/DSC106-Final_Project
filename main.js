@@ -1,5 +1,9 @@
 mapboxgl.accessToken = "pk.eyJ1IjoieXV0YW9saW4iLCJhIjoiY21wNWI0MDl5MDlldTJwcTI3bmtkY3h3NiJ9.7aMzhLHSwm6BOedHTptjNA";
 
+// More workers for parsing large GeoJSON files.
+// Set this before creating any maps.
+mapboxgl.workerCount = 4;
+
 const views = {
   global: {
     center: [15, 8],
@@ -64,6 +68,12 @@ const spikeFilesByDetail = {
   }
 };
 
+const changeFilesByDetail = {
+  low: "data/actual_ndvi_change_2000_2025_low.geojson",
+  medium: "data/actual_ndvi_change_2000_2025_medium.geojson",
+  high: "data/actual_ndvi_change_2000_2025_high.geojson"
+};
+
 const emptyGeoJSON = {
   type: "FeatureCollection",
   features: []
@@ -90,8 +100,10 @@ const mapOptions = {
   zoom: views.global.zoom,
   pitch: views.global.pitch,
   bearing: views.global.bearing,
-  antialias: true,
+  antialias: false,
   projection: "mercator",
+
+  // Keep seamless horizontal panning.
   renderWorldCopies: true
 };
 
@@ -210,6 +222,9 @@ function preloadLikelyNextFiles() {
     getGeoJSON("2025", "medium");
     getGeoJSON("2000", "medium");
     getGeoJSON("2013", "medium");
+
+    // Preload medium change file because regional change mode often uses it.
+    getChangeGeoJSON("medium");
   }, 1500);
 }
 
@@ -274,6 +289,8 @@ function changeDetailFromZoom(zoom, viewName = activeView) {
     return "low";
   }
 
+  // Regional change mode can use high because the precomputed change file
+  // filters small changes and has fewer visible spikes.
   return "high";
 }
 
@@ -289,10 +306,7 @@ async function getGeoJSON(year, detail) {
 
 async function getChangeGeoJSON(detail) {
   if (!cachedChangeData[detail]) {
-    const data2000 = await getGeoJSON("2000", detail);
-    const data2025 = await getGeoJSON("2025", detail);
-
-    cachedChangeData[detail] = buildChangeGeoJSON(data2000, data2025);
+    cachedChangeData[detail] = await loadGeoJSON(changeFilesByDetail[detail]);
   }
 
   return cachedChangeData[detail];
@@ -388,79 +402,6 @@ async function loadDetailForCurrentView(viewName, view) {
   } finally {
     isLoadingDetail = false;
   }
-}
-
-function buildChangeGeoJSON(dataOld, dataNew) {
-  const byLocation = new Map();
-
-  dataOld.features.forEach(feature => {
-    const key = cellKey(feature);
-    byLocation.set(
-      key,
-      Number(feature.properties.ndvi ?? feature.properties.greenness)
-    );
-  });
-
-  const features = [];
-
-  dataNew.features.forEach(feature => {
-    const key = cellKey(feature);
-    const oldValue = byLocation.get(key);
-
-    if (oldValue === undefined) return;
-
-    const newValue = Number(feature.properties.ndvi ?? feature.properties.greenness);
-    const change = Number((newValue - oldValue).toFixed(4));
-
-    if (Math.abs(change) < 0.025) return;
-
-    features.push({
-      type: "Feature",
-      geometry: shrinkPolygon(feature.geometry, 0.55),
-      properties: {
-        change,
-        ndvi_old: oldValue,
-        ndvi_new: newValue
-      }
-    });
-  });
-
-  return {
-    type: "FeatureCollection",
-    features
-  };
-}
-
-function shrinkPolygon(geometry, scale = 0.55) {
-  const ring = geometry.coordinates[0];
-
-  let lonSum = 0;
-  let latSum = 0;
-
-  for (let i = 0; i < ring.length; i++) {
-    lonSum += ring[i][0];
-    latSum += ring[i][1];
-  }
-
-  const centerLon = lonSum / ring.length;
-  const centerLat = latSum / ring.length;
-
-  const newRing = new Array(ring.length);
-
-  for (let i = 0; i < ring.length; i++) {
-    const lon = ring[i][0];
-    const lat = ring[i][1];
-
-    newRing[i] = [
-      centerLon + (lon - centerLon) * scale,
-      centerLat + (lat - centerLat) * scale
-    ];
-  }
-
-  return {
-    type: "Polygon",
-    coordinates: [newRing]
-  };
 }
 
 function cellKey(feature) {
@@ -643,14 +584,18 @@ async function flyAllTo(viewName) {
 
   if (!view) return;
 
+  const primaryMap = currentMode === "compare" ? leftMap : singleMap;
+
+  primaryMap.once("moveend", async () => {
+    await loadDetailForCurrentView(viewName, getCurrentCamera(primaryMap));
+  });
+
   if (currentMode === "compare") {
     mapFlyTo(leftMap, view);
     mapFlyTo(rightMap, view);
   } else {
     mapFlyTo(singleMap, view);
   }
-
-  await loadDetailForCurrentView(viewName, view);
 }
 
 function mapFlyTo(map, view) {
@@ -687,33 +632,44 @@ function getCurrentCamera(map) {
 }
 
 function syncCompareMaps() {
-  function sync(sourceMap, targetMap) {
-    if (syncing) return;
+  let activeMovingMap = null;
 
-    syncing = true;
+  function createSyncHandler(sourceMap, targetMap) {
+    return () => {
+      if (currentMode !== "compare" || syncing) return;
 
-    targetMap.jumpTo({
-      center: sourceMap.getCenter(),
-      zoom: sourceMap.getZoom(),
-      bearing: sourceMap.getBearing(),
-      pitch: sourceMap.getPitch()
-    });
+      if (activeMovingMap && activeMovingMap !== sourceMap) return;
 
-    requestAnimationFrame(() => {
-      syncing = false;
-    });
+      syncing = true;
+      activeMovingMap = sourceMap;
+
+      targetMap.jumpTo({
+        center: sourceMap.getCenter(),
+        zoom: sourceMap.getZoom(),
+        bearing: sourceMap.getBearing(),
+        pitch: sourceMap.getPitch()
+      });
+
+      requestAnimationFrame(() => {
+        syncing = false;
+      });
+    };
   }
 
-  leftMap.on("move", () => {
-    if (currentMode === "compare") {
-      sync(leftMap, rightMap);
-    }
-  });
+  const onLeftMove = createSyncHandler(leftMap, rightMap);
+  const onRightMove = createSyncHandler(rightMap, leftMap);
 
-  rightMap.on("move", () => {
-    if (currentMode === "compare") {
-      sync(rightMap, leftMap);
-    }
+  leftMap.on("move", onLeftMove);
+  rightMap.on("move", onRightMove);
+
+  const clearActiveMap = () => {
+    activeMovingMap = null;
+  };
+
+  maps.forEach(map => {
+    map.on("moveend", clearActiveMap);
+    map.on("mouseup", clearActiveMap);
+    map.on("touchend", clearActiveMap);
   });
 }
 
@@ -723,10 +679,18 @@ function setupPopup(map) {
     closeOnClick: false
   });
 
+  let lastHoveredId = null;
+
   map.on("mousemove", "spikes-layer", event => {
     if (!event.features.length) return;
 
-    const props = event.features[0].properties;
+    const feature = event.features[0];
+    const currentId = cellKey(feature);
+
+    if (currentId === lastHoveredId) return;
+    lastHoveredId = currentId;
+
+    const props = feature.properties;
 
     map.getCanvas().style.cursor = "pointer";
 
@@ -746,6 +710,7 @@ function setupPopup(map) {
   });
 
   map.on("mouseleave", "spikes-layer", () => {
+    lastHoveredId = null;
     map.getCanvas().style.cursor = "";
     popup.remove();
   });
@@ -754,7 +719,13 @@ function setupPopup(map) {
     map.on("mousemove", "change-spikes-layer", event => {
       if (!event.features.length) return;
 
-      const props = event.features[0].properties;
+      const feature = event.features[0];
+      const currentId = cellKey(feature);
+
+      if (currentId === lastHoveredId) return;
+      lastHoveredId = currentId;
+
+      const props = feature.properties;
       const change = Number(props.change);
 
       map.getCanvas().style.cursor = "pointer";
@@ -769,6 +740,7 @@ function setupPopup(map) {
     });
 
     map.on("mouseleave", "change-spikes-layer", () => {
+      lastHoveredId = null;
       map.getCanvas().style.cursor = "";
       popup.remove();
     });
