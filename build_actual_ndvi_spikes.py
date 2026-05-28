@@ -22,7 +22,7 @@ FILES = {
 # high   = zoomed-in view
 DETAIL_LEVELS = {
     "low": 80,
-    "medium": 40,
+    "medium": 45,
     "high": 35,
 }
 
@@ -31,6 +31,10 @@ DETAIL_LEVELS = {
 # 0.001 = tiny overlap, usually best
 # 0.005 = stronger overlap
 BLOCK_PAD = 0.001
+
+# Coordinate precision for exported GeoJSON.
+# 6 decimal places is still very precise for web maps.
+COORD_PRECISION = 6
 
 # Valid MODIS NDVI range after scale factor
 NDVI_MIN = -0.2
@@ -67,6 +71,11 @@ def make_block_polygon(transform, row_start, col_start, row_end, col_end, pad=0.
         east = cx + half_w
         south = cy - half_h
         north = cy + half_h
+
+    west = round(float(west), COORD_PRECISION)
+    east = round(float(east), COORD_PRECISION)
+    south = round(float(south), COORD_PRECISION)
+    north = round(float(north), COORD_PRECISION)
 
     return {
         "type": "Polygon",
@@ -231,8 +240,9 @@ def convert_one_year_detail(year, tif_path, detail_name, block_size):
 
     out_path = OUT_DIR / f"actual_ndvi_spikes_{year}_{detail_name}.geojson"
 
+    # separators=(",", ":") removes unnecessary spaces and reduces file size.
     with open(out_path, "w", encoding="utf-8") as f:
-        json.dump(geojson, f)
+        json.dump(geojson, f, separators=(",", ":"))
 
     print(f"Saved {len(features):,} spikes to {out_path}")
 
