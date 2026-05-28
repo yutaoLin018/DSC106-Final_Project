@@ -270,7 +270,7 @@ def convert_one_year_detail(year, tif_path, detail_name, block_size):
         "features": features
     }
 
-    out_path = OUT_DIR / f"actual_ndvi_spikes_{year}_{detail_name}.geojson"
+    out_path = OUT_DIR / f"actual_ndvi_spikes_{year}_{detail_name}.json"
 
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(geojson, f, separators=(",", ":"))
@@ -361,7 +361,7 @@ def convert_change_detail(old_year, new_year, detail_name, block_size):
     }
 
     out_path = OUT_DIR / (
-        f"actual_ndvi_change_{old_year}_{new_year}_{detail_name}.geojson"
+        f"actual_ndvi_change_{old_year}_{new_year}_{detail_name}.json"
     )
 
     with open(out_path, "w", encoding="utf-8") as f:

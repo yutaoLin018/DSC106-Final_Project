@@ -1,6 +1,6 @@
 mapboxgl.accessToken = "pk.eyJ1IjoieXV0YW9saW4iLCJhIjoiY21wNWI0MDl5MDlldTJwcTI3bmtkY3h3NiJ9.7aMzhLHSwm6BOedHTptjNA";
 
-// More workers for parsing large GeoJSON files.
+// More workers for parsing large JSON / GeoJSON files.
 // Set this before creating any maps.
 mapboxgl.workerCount = 4;
 
@@ -52,26 +52,26 @@ const storyText = {
 
 const spikeFilesByDetail = {
   "2000": {
-    low: "data/actual_ndvi_spikes_2000_low.geojson",
-    medium: "data/actual_ndvi_spikes_2000_medium.geojson",
-    high: "data/actual_ndvi_spikes_2000_high.geojson"
+    low: "data/actual_ndvi_spikes_2000_low.json",
+    medium: "data/actual_ndvi_spikes_2000_medium.json",
+    high: "data/actual_ndvi_spikes_2000_high.json"
   },
   "2013": {
-    low: "data/actual_ndvi_spikes_2013_low.geojson",
-    medium: "data/actual_ndvi_spikes_2013_medium.geojson",
-    high: "data/actual_ndvi_spikes_2013_high.geojson"
+    low: "data/actual_ndvi_spikes_2013_low.json",
+    medium: "data/actual_ndvi_spikes_2013_medium.json",
+    high: "data/actual_ndvi_spikes_2013_high.json"
   },
   "2025": {
-    low: "data/actual_ndvi_spikes_2025_low.geojson",
-    medium: "data/actual_ndvi_spikes_2025_medium.geojson",
-    high: "data/actual_ndvi_spikes_2025_high.geojson"
+    low: "data/actual_ndvi_spikes_2025_low.json",
+    medium: "data/actual_ndvi_spikes_2025_medium.json",
+    high: "data/actual_ndvi_spikes_2025_high.json"
   }
 };
 
 const changeFilesByDetail = {
-  low: "data/actual_ndvi_change_2000_2025_low.geojson",
-  medium: "data/actual_ndvi_change_2000_2025_medium.geojson",
-  high: "data/actual_ndvi_change_2000_2025_high.geojson"
+  low: "data/actual_ndvi_change_2000_2025_low.json",
+  medium: "data/actual_ndvi_change_2000_2025_medium.json",
+  high: "data/actual_ndvi_change_2000_2025_high.json"
 };
 
 const emptyGeoJSON = {
@@ -289,8 +289,6 @@ function changeDetailFromZoom(zoom, viewName = activeView) {
     return "low";
   }
 
-  // Regional change mode can use high because the precomputed change file
-  // filters small changes and has fewer visible spikes.
   return "high";
 }
 
@@ -759,4 +757,15 @@ function resizeMaps() {
     leftMap.resize();
     rightMap.resize();
   }, 250);
+}
+
+// Register service worker for local data caching.
+// Put sw.js in the same folder as index.html.
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker
+      .register("./sw.js")
+      .then(() => console.log("Offline data cache active."))
+      .catch(err => console.error("Service worker registration failed:", err));
+  });
 }
