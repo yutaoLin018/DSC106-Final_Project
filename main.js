@@ -253,15 +253,16 @@ function detailFromZoom(zoom, viewName = activeView) {
 }
 
 function changeDetailFromZoom(zoom, viewName = activeView) {
-  if (zoom >= 6.0) return "high";
-
-  if (viewName !== "global") {
-    return "medium";
+  // Global change view stays light
+  if (viewName === "global") {
+    if (zoom >= 5.3) return "high";
+    if (zoom >= 3.2) return "medium";
+    return "low";
   }
 
-  if (zoom >= 3.8) return "medium";
-
-  return "low";
+  // Specific regions use high detail immediately
+  // because change mode has fewer visible spikes
+  return "high";
 }
 
 async function getGeoJSON(year, detail) {
