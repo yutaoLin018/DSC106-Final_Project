@@ -26,17 +26,29 @@ DETAIL_LEVELS = {
     "high": 35,
 }
 
-# Small overlap to hide white seams between adjacent blocks.
+# Pre-generate change files for these year pairs.
+# This makes the webpage faster because main.js no longer needs to compute change.
+CHANGE_PAIRS = [
+    ("2000", "2025"),
+]
+
+# Small overlap to hide white seams between adjacent vegetation blocks.
 # 0.000 = exact edges
 # 0.001 = tiny overlap, usually best
 # 0.005 = stronger overlap
 BLOCK_PAD = 0.001
 
+# Change cells should be smaller so growth/decline spikes do not merge together.
+CHANGE_CELL_SCALE = 0.55
+
+# Hide tiny changes to reduce noise and file size.
+CHANGE_THRESHOLD = 0.025
+
 # Coordinate precision for exported GeoJSON.
 # 6 decimal places is still very precise for web maps.
 COORD_PRECISION = 6
 
-# Valid MODIS NDVI range after scale factor
+# Valid MODIS NDVI range after scale factor.
 NDVI_MIN = -0.2
 NDVI_MAX = 1.0
 
@@ -45,12 +57,24 @@ def clamp(value, low, high):
     return max(low, min(high, value))
 
 
-def make_block_polygon(transform, row_start, col_start, row_end, col_end, pad=0.001):
+def round_coord(value):
+    return round(float(value), COORD_PRECISION)
+
+
+def make_block_polygon(
+    transform,
+    row_start,
+    col_start,
+    row_end,
+    col_end,
+    pad=0.001,
+    scale=1.0
+):
     """
     Build polygon from exact raster block boundaries.
 
-    This makes adjacent blocks touch cleanly instead of leaving gaps caused by
-    center-point sizing.
+    pad gives a tiny overlap for normal vegetation blocks.
+    scale can shrink change blocks so red/green spikes do not overlap too much.
     """
     x_left, y_top = transform * (col_start, row_start)
     x_right, y_bottom = transform * (col_end, row_end)
@@ -60,22 +84,24 @@ def make_block_polygon(transform, row_start, col_start, row_end, col_end, pad=0.
     south = min(y_top, y_bottom)
     north = max(y_top, y_bottom)
 
-    # Tiny expansion to avoid visible rendering seams in Mapbox.
+    cx = (west + east) / 2
+    cy = (south + north) / 2
+
+    half_w = (east - west) / 2
+    half_h = (north - south) / 2
+
     if pad > 0:
-        cx = (west + east) / 2
-        cy = (south + north) / 2
-        half_w = (east - west) / 2 * (1 + pad)
-        half_h = (north - south) / 2 * (1 + pad)
+        half_w *= (1 + pad)
+        half_h *= (1 + pad)
 
-        west = cx - half_w
-        east = cx + half_w
-        south = cy - half_h
-        north = cy + half_h
+    if scale != 1.0:
+        half_w *= scale
+        half_h *= scale
 
-    west = round(float(west), COORD_PRECISION)
-    east = round(float(east), COORD_PRECISION)
-    south = round(float(south), COORD_PRECISION)
-    north = round(float(north), COORD_PRECISION)
+    west = round_coord(cx - half_w)
+    east = round_coord(cx + half_w)
+    south = round_coord(cy - half_h)
+    north = round_coord(cy + half_h)
 
     return {
         "type": "Polygon",
@@ -165,6 +191,18 @@ def ndvi_to_height(ndvi, p05, p95):
     return 9000 + (norm ** 2.1) * 650000
 
 
+def is_valid_map_coordinate(geometry):
+    lon, lat = polygon_center(geometry)
+
+    if not (-180 <= lon <= 180 and -90 <= lat <= 90):
+        return False
+
+    if lat < -60 or lat > 85:
+        return False
+
+    return True
+
+
 def convert_one_year_detail(year, tif_path, detail_name, block_size):
     if not tif_path.exists():
         raise FileNotFoundError(f"Missing file: {tif_path}")
@@ -207,17 +245,11 @@ def convert_one_year_detail(year, tif_path, detail_name, block_size):
                 col,
                 row_end,
                 col_end,
-                pad=BLOCK_PAD
+                pad=BLOCK_PAD,
+                scale=1.0
             )
 
-            lon, lat = polygon_center(geometry)
-
-            # Keep only valid Mapbox coordinates.
-            if not (-180 <= lon <= 180 and -90 <= lat <= 90):
-                continue
-
-            # Match the map extent used in the website.
-            if lat < -60 or lat > 85:
+            if not is_valid_map_coordinate(geometry):
                 continue
 
             greenness = ndvi_to_display_value(ndvi, p05, p95)
@@ -240,17 +272,114 @@ def convert_one_year_detail(year, tif_path, detail_name, block_size):
 
     out_path = OUT_DIR / f"actual_ndvi_spikes_{year}_{detail_name}.geojson"
 
-    # separators=(",", ":") removes unnecessary spaces and reduces file size.
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(geojson, f, separators=(",", ":"))
 
     print(f"Saved {len(features):,} spikes to {out_path}")
 
 
+def convert_change_detail(old_year, new_year, detail_name, block_size):
+    old_path = FILES[old_year]
+    new_path = FILES[new_year]
+
+    if not old_path.exists():
+        raise FileNotFoundError(f"Missing file: {old_path}")
+
+    if not new_path.exists():
+        raise FileNotFoundError(f"Missing file: {new_path}")
+
+    print(f"Reading change {old_year} → {new_year} / {detail_name}")
+
+    old_arr, old_transform = read_ndvi_tif(old_path)
+    new_arr, new_transform = read_ndvi_tif(new_path)
+
+    if old_arr.shape != new_arr.shape:
+        raise ValueError(
+            f"Raster shapes do not match for {old_year} and {new_year}: "
+            f"{old_arr.shape} vs {new_arr.shape}"
+        )
+
+    if old_transform != new_transform:
+        print(
+            "Warning: raster transforms are not exactly identical. "
+            "Using the newer year's transform for output geometry."
+        )
+
+    transform = new_transform
+
+    nrows, ncols = new_arr.shape
+    features = []
+
+    for row in range(0, nrows, block_size):
+        for col in range(0, ncols, block_size):
+            row_end = min(row + block_size, nrows)
+            col_end = min(col + block_size, ncols)
+
+            old_ndvi = block_mean(old_arr, row, col, block_size)
+            new_ndvi = block_mean(new_arr, row, col, block_size)
+
+            if not np.isfinite(old_ndvi) or not np.isfinite(new_ndvi):
+                continue
+
+            # Skip mostly water / invalid negative areas.
+            # If either year has meaningful land-like NDVI, keep it.
+            if old_ndvi < -0.05 and new_ndvi < -0.05:
+                continue
+
+            change = new_ndvi - old_ndvi
+
+            # Hide tiny changes to reduce visual noise and file size.
+            if abs(change) < CHANGE_THRESHOLD:
+                continue
+
+            geometry = make_block_polygon(
+                transform,
+                row,
+                col,
+                row_end,
+                col_end,
+                pad=0.0,
+                scale=CHANGE_CELL_SCALE
+            )
+
+            if not is_valid_map_coordinate(geometry):
+                continue
+
+            features.append({
+                "type": "Feature",
+                "properties": {
+                    "change": round(float(change), 5),
+                    "ndvi_old": round(float(old_ndvi), 5),
+                    "ndvi_new": round(float(new_ndvi), 5)
+                },
+                "geometry": geometry
+            })
+
+    geojson = {
+        "type": "FeatureCollection",
+        "features": features
+    }
+
+    out_path = OUT_DIR / (
+        f"actual_ndvi_change_{old_year}_{new_year}_{detail_name}.geojson"
+    )
+
+    with open(out_path, "w", encoding="utf-8") as f:
+        json.dump(geojson, f, separators=(",", ":"))
+
+    print(f"Saved {len(features):,} change spikes to {out_path}")
+
+
 def main():
+    # 1. Generate normal vegetation spike files.
     for year, path in FILES.items():
         for detail_name, block_size in DETAIL_LEVELS.items():
             convert_one_year_detail(year, path, detail_name, block_size)
+
+    # 2. Generate precomputed change files.
+    for old_year, new_year in CHANGE_PAIRS:
+        for detail_name, block_size in DETAIL_LEVELS.items():
+            convert_change_detail(old_year, new_year, detail_name, block_size)
 
 
 if __name__ == "__main__":
