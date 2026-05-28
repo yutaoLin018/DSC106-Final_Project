@@ -74,6 +74,7 @@ let activeView = "global";
 let compareBaseYear = "2000";
 
 let cachedData = {};
+let cachedChangeData = {};
 let syncing = false;
 let isLoadingDetail = false;
 
@@ -286,6 +287,17 @@ async function getGeoJSON(year, detail) {
   return cachedData[key];
 }
 
+async function getChangeGeoJSON(detail) {
+  if (!cachedChangeData[detail]) {
+    const data2000 = await getGeoJSON("2000", detail);
+    const data2025 = await getGeoJSON("2025", detail);
+
+    cachedChangeData[detail] = buildChangeGeoJSON(data2000, data2025);
+  }
+
+  return cachedChangeData[detail];
+}
+
 async function loadGeoJSON(path) {
   const response = await fetch(path);
 
@@ -296,24 +308,34 @@ async function loadGeoJSON(path) {
   return await response.json();
 }
 
+function debounce(func, wait) {
+  let timeout;
+
+  return function(...args) {
+    clearTimeout(timeout);
+
+    timeout = setTimeout(() => {
+      func.apply(this, args);
+    }, wait);
+  };
+}
+
 function setupDetailSwitching() {
-  singleMap.on("zoomend", async () => {
+  const handleSingleZoom = debounce(async () => {
     if (currentMode === "present" || currentMode === "change") {
       await loadDetailForCurrentView(activeView, getCurrentCamera(singleMap));
     }
-  });
+  }, 300);
 
-  leftMap.on("zoomend", async () => {
+  const handleCompareZoom = debounce(async map => {
     if (currentMode === "compare") {
-      await loadDetailForCurrentView(activeView, getCurrentCamera(leftMap));
+      await loadDetailForCurrentView(activeView, getCurrentCamera(map));
     }
-  });
+  }, 300);
 
-  rightMap.on("zoomend", async () => {
-    if (currentMode === "compare") {
-      await loadDetailForCurrentView(activeView, getCurrentCamera(rightMap));
-    }
-  });
+  singleMap.on("zoomend", handleSingleZoom);
+  leftMap.on("zoomend", () => handleCompareZoom(leftMap));
+  rightMap.on("zoomend", () => handleCompareZoom(rightMap));
 }
 
 async function loadDetailForCurrentView(viewName, view) {
@@ -355,9 +377,7 @@ async function loadDetailForCurrentView(viewName, view) {
     }
 
     if (currentMode === "change") {
-      const data2000 = await getGeoJSON("2000", detail);
-      const data2025 = await getGeoJSON("2025", detail);
-      const changeData = buildChangeGeoJSON(data2000, data2025);
+      const changeData = await getChangeGeoJSON(detail);
 
       if (singleMap.getSource("change-spikes")) {
         singleMap.getSource("change-spikes").setData(changeData);
@@ -414,13 +434,28 @@ function buildChangeGeoJSON(dataOld, dataNew) {
 function shrinkPolygon(geometry, scale = 0.55) {
   const ring = geometry.coordinates[0];
 
-  const centerLon = ring.reduce((sum, p) => sum + p[0], 0) / ring.length;
-  const centerLat = ring.reduce((sum, p) => sum + p[1], 0) / ring.length;
+  let lonSum = 0;
+  let latSum = 0;
 
-  const newRing = ring.map(([lon, lat]) => [
-    centerLon + (lon - centerLon) * scale,
-    centerLat + (lat - centerLat) * scale
-  ]);
+  for (let i = 0; i < ring.length; i++) {
+    lonSum += ring[i][0];
+    latSum += ring[i][1];
+  }
+
+  const centerLon = lonSum / ring.length;
+  const centerLat = latSum / ring.length;
+
+  const newRing = new Array(ring.length);
+
+  for (let i = 0; i < ring.length; i++) {
+    const lon = ring[i][0];
+    const lat = ring[i][1];
+
+    newRing[i] = [
+      centerLon + (lon - centerLon) * scale,
+      centerLat + (lat - centerLat) * scale
+    ];
+  }
 
   return {
     type: "Polygon",
@@ -434,15 +469,27 @@ function cellKey(feature) {
   let lonSum = 0;
   let latSum = 0;
 
-  coords.forEach(coord => {
-    lonSum += coord[0];
-    latSum += coord[1];
-  });
+  for (let i = 0; i < coords.length; i++) {
+    lonSum += coords[i][0];
+    latSum += coords[i][1];
+  }
 
   const lon = lonSum / coords.length;
   const lat = latSum / coords.length;
 
-  return `${lon.toFixed(3)},${lat.toFixed(3)}`;
+  return `${Math.round(lon * 1000)},${Math.round(lat * 1000)}`;
+}
+
+function clearCompareMaps() {
+  if (leftMap.getSource("spikes")) {
+    leftMap.getSource("spikes").setData(emptyGeoJSON);
+  }
+
+  if (rightMap.getSource("spikes")) {
+    rightMap.getSource("spikes").setData(emptyGeoJSON);
+  }
+
+  activeDetail.compare = null;
 }
 
 function setupTopTabs() {
@@ -522,6 +569,8 @@ async function setMode(mode) {
   }
 
   if (mode === "present") {
+    clearCompareMaps();
+
     const detail = detailFromZoom(previousCamera.zoom, activeView);
     const data2025 = await getGeoJSON("2025", detail);
 
@@ -541,11 +590,10 @@ async function setMode(mode) {
   }
 
   if (mode === "change") {
-    const detail = changeDetailFromZoom(previousCamera.zoom, activeView);
+    clearCompareMaps();
 
-    const data2000 = await getGeoJSON("2000", detail);
-    const data2025 = await getGeoJSON("2025", detail);
-    const changeData = buildChangeGeoJSON(data2000, data2025);
+    const detail = changeDetailFromZoom(previousCamera.zoom, activeView);
+    const changeData = await getChangeGeoJSON(detail);
 
     if (singleMap.getSource("change-spikes")) {
       singleMap.getSource("change-spikes").setData(changeData);
