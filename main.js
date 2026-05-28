@@ -123,6 +123,10 @@ function waitForMapLoad(map) {
 }
 
 async function initAllMaps() {
+  removeMapLighting(singleMap);
+  removeMapLighting(leftMap);
+  removeMapLighting(rightMap);
+
   const data2025Low = await getGeoJSON("2025", "low");
 
   setupMapLayer(singleMap, data2025Low, "present");
@@ -186,6 +190,20 @@ async function initAllMaps() {
   preloadLikelyNextFiles();
 }
 
+function removeMapLighting(map) {
+  if (map.setLight) {
+    map.setLight({
+      anchor: "viewport",
+      color: "#ffffff",
+      intensity: 0
+    });
+  }
+
+  if (map.setFog) {
+    map.setFog(null);
+  }
+}
+
 function preloadLikelyNextFiles() {
   setTimeout(() => {
     getGeoJSON("2025", "medium");
@@ -195,11 +213,7 @@ function preloadLikelyNextFiles() {
 }
 
 function setupMapLayer(map, data, mode) {
-  map.setLight({
-    anchor: "viewport",
-    color: "white",
-    intensity: 0
-  });
+  removeMapLighting(map);
 
   map.addSource("spikes", {
     type: "geojson",
@@ -253,15 +267,12 @@ function detailFromZoom(zoom, viewName = activeView) {
 }
 
 function changeDetailFromZoom(zoom, viewName = activeView) {
-  // Global change view stays light
   if (viewName === "global") {
     if (zoom >= 5.3) return "high";
     if (zoom >= 3.2) return "medium";
     return "low";
   }
 
-  // Specific regions use high detail immediately
-  // because change mode has fewer visible spikes
   return "high";
 }
 
