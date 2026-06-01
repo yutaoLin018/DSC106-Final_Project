@@ -348,6 +348,13 @@ body.mode-compare .compare-switch {
   pointer-events: auto;
 }
 
+/* Hide chart panel in compare mode */
+body.mode-compare .chart-panel {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .chart-panel h3 {
   margin: 0 0 0.8rem;
   font-size: 1rem;
