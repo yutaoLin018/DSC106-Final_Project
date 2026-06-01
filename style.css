@@ -126,169 +126,6 @@ body {
   color: var(--muted);
 }
 
-/* Hide chart panel in compare mode */
-body.mode-compare .chart-panel {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-
-/* =========================
-   Mobile layout
-   ========================= */
-
-@media (max-width: 650px) {
-  html,
-  body {
-    overflow: hidden;
-  }
-
-  .top-ui {
-    flex-wrap: wrap;
-    padding: 0;
-    background: rgba(245, 244, 239, 0.94);
-    backdrop-filter: blur(8px);
-  }
-
-  .brand {
-    display: none;
-  }
-
-  .compare-tabs {
-    width: 100%;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-  }
-
-  .compare-tab {
-    min-width: 0;
-    width: 100%;
-    font-size: 0.68rem;
-    line-height: 1.1;
-    padding: 0.55rem 0.2rem;
-  }
-
-  .compare-tab small {
-    display: none;
-  }
-
-  .compare-tab.selected {
-    transform: none;
-    border-top: 3px solid #2b65d9;
-  }
-
-  .region-jump {
-    width: 100%;
-    flex: none;
-    justify-content: center;
-    padding: 0.45rem 0.65rem;
-    gap: 0.45rem;
-    background: rgba(255, 255, 255, 0.95);
-  }
-
-  .region-jump label {
-    flex: 0 0 auto;
-    font-size: 0.7rem;
-  }
-
-  .region-jump select {
-    flex: 1;
-    width: auto;
-    max-width: none;
-    min-width: 0;
-    font-size: 0.76rem;
-    padding: 0.42rem 0.55rem;
-  }
-
-  .mapboxgl-ctrl-top-right {
-    top: 104px;
-    right: 8px;
-  }
-
-  .story-panel {
-    left: 0.75rem;
-    right: 0.75rem;
-    bottom: 0.75rem;
-    width: auto;
-    max-width: none;
-  }
-
-  .story-panel h2 {
-    font-size: 1.15rem;
-    margin-bottom: 0.45rem;
-  }
-
-  .story-panel p {
-    font-size: 0.76rem;
-    line-height: 1.42;
-    padding: 0.72rem 0.8rem;
-    border-radius: 0.8rem;
-    max-height: 120px;
-    overflow-y: auto;
-  }
-
-  .chart-panel {
-    display: none;
-  }
-
-  .compare-switch {
-    bottom: 20%;
-  }
-
-  .compare-year-option,
-  .compare-current-year {
-    font-size: 0.72rem;
-    min-width: 46px;
-    padding: 0.28rem 0.38rem;
-  }
-
-  .split-line {
-    width: 3px;
-  }
-
-  .mapboxgl-popup {
-    max-width: 220px !important;
-  }
-
-  .mapboxgl-popup-content {
-    font-size: 0.75rem;
-    padding: 0.65rem 0.75rem;
-  }
-
-  .splash-screen {
-    padding: 1rem;
-  }
-
-  .splash-card {
-    padding: 1.35rem;
-    border-radius: 1.1rem;
-  }
-
-  .splash-card h1 {
-    font-size: 2.25rem;
-  }
-
-  .splash-card > p {
-    font-size: 0.9rem;
-    line-height: 1.55;
-  }
-
-  .splash-details {
-    display: grid;
-    gap: 0.45rem;
-    margin: 1.1rem 0;
-  }
-
-  .splash-details span {
-    font-size: 0.75rem;
-  }
-
-  .start-button {
-    width: 100%;
-    padding: 0.8rem 1rem;
-  }
-}
-
 /* =========================
    Responsive Top UI
    ========================= */
@@ -613,13 +450,6 @@ body.mode-compare .compare-switch {
   pointer-events: auto;
 }
 
-/* Hide chart panel in compare mode */
-body.mode-compare .chart-panel {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-
 .chart-panel h3 {
   margin: 0 0 0.8rem;
   font-size: 1rem;
@@ -662,6 +492,11 @@ body.mode-compare .chart-panel {
   border-radius: 999px;
 }
 
+.chart-loading {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
 .change-chart {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -702,18 +537,11 @@ body.mode-compare .chart-panel {
   color: var(--muted);
 }
 
-@media (max-width: 900px) {
-  .chart-panel {
-    right: 1rem;
-    bottom: 1rem;
-    width: min(340px, calc(100% - 2rem));
-  }
-}
-
-@media (max-width: 650px) {
-  .chart-panel {
-    display: none;
-  }
+/* Hide chart panel in compare mode */
+body.mode-compare .chart-panel {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 /* =========================
@@ -784,61 +612,234 @@ body.mode-compare .chart-panel {
 }
 
 /* =========================
-   Small screens
+   Mobile layout
    ========================= */
 
 @media (max-width: 650px) {
+  html,
+  body {
+    overflow: hidden;
+  }
+
+  .map-stage,
+  #single-map,
+  #compare-view,
+  .compare-map {
+    height: 100dvh;
+    min-height: 100svh;
+  }
+
+  .top-ui {
+    flex-wrap: wrap;
+    padding: 0;
+    background: rgba(245, 244, 239, 0.96);
+    backdrop-filter: blur(8px);
+  }
+
+  .brand {
+    display: none;
+  }
+
+  .compare-tabs {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+  }
+
   .compare-tab {
-    font-size: 0.72rem;
-    padding: 0.55rem 0.25rem;
+    min-width: 0;
+    width: 100%;
+    font-size: 0.68rem;
+    line-height: 1.1;
+    padding: 0.55rem 0.2rem;
+  }
+
+  .compare-tab small {
+    display: none;
+  }
+
+  .compare-tab.selected {
+    transform: none;
+    border-top: 3px solid #2b65d9;
   }
 
   .region-jump {
-    justify-content: flex-start;
-    gap: 0.4rem;
+    width: 100%;
+    flex: none;
+    justify-content: center;
+    padding: 0.45rem 0.65rem;
+    gap: 0.45rem;
+    background: rgba(255, 255, 255, 0.96);
   }
 
   .region-jump label {
-    flex: 0 0 auto;
-    font-size: 0.7rem;
+    display: none;
   }
 
   .region-jump select {
     flex: 1;
-    width: auto;
+    width: 100%;
+    max-width: none;
     min-width: 0;
-    font-size: 0.76rem;
+    font-size: 0.9rem;
+    padding: 0.55rem 0.7rem;
   }
 
   .mapboxgl-ctrl-top-right {
-    top: 120px;
+    top: 118px;
     right: 8px;
   }
 
+  /* Mobile bottom information drawer */
   .story-panel {
-    left: 1rem;
-    bottom: 4vh;
-    width: calc(100% - 2rem);
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: 0.75rem;
+    width: auto;
+    max-width: none;
+    z-index: 35;
+    pointer-events: none;
   }
 
   .story-panel h2 {
-    font-size: 1.45rem;
+    font-size: 1.15rem;
+    margin: 0 0 0.45rem;
+    line-height: 1.1;
   }
 
   .story-panel p {
-    font-size: 0.86rem;
-    padding: 0.8rem 0.9rem;
+    display: block;
+    font-size: 0.76rem;
+    line-height: 1.42;
+    padding: 0.72rem 0.8rem;
+    border-radius: 0.8rem;
+    max-height: 92px;
+    overflow-y: auto;
+    pointer-events: auto;
+  }
+
+  /* Show chart on mobile, but make it compact */
+  .chart-panel {
+    display: block;
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: 11.2rem;
+    width: auto;
+    max-width: none;
+    padding: 0.75rem 0.85rem;
+    border-radius: 0.85rem;
+    z-index: 34;
+  }
+
+  .chart-panel h3 {
+    font-size: 0.85rem;
+    margin-bottom: 0.45rem;
+  }
+
+  .mini-chart-block {
+    margin-top: 0.5rem;
+  }
+
+  .mini-chart-label {
+    font-size: 0.68rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .bar-chart {
+    gap: 0.3rem;
+  }
+
+  .bar-row {
+    grid-template-columns: 36px 1fr 40px;
+    gap: 0.35rem;
+    font-size: 0.66rem;
+  }
+
+  .bar-track {
+    height: 8px;
+  }
+
+  .change-chart {
+    gap: 0.35rem;
+  }
+
+  .change-box {
+    padding: 0.45rem 0.5rem;
+    border-radius: 0.6rem;
+  }
+
+  .change-box strong {
+    font-size: 0.85rem;
+  }
+
+  .change-box span {
+    font-size: 0.62rem;
+  }
+
+  #chart-caption {
+    display: none;
+  }
+
+  /* Still hide chart in compare mode */
+  body.mode-compare .chart-panel {
+    display: none;
   }
 
   .compare-switch {
-    bottom: 30%;
+    bottom: 22%;
   }
 
   .compare-year-option,
   .compare-current-year {
+    font-size: 0.72rem;
+    min-width: 46px;
+    padding: 0.28rem 0.38rem;
+  }
+
+  .split-line {
+    width: 3px;
+  }
+
+  .mapboxgl-popup {
+    max-width: 220px !important;
+  }
+
+  .mapboxgl-popup-content {
     font-size: 0.75rem;
-    min-width: 48px;
-    padding: 0.3rem 0.4rem;
+    padding: 0.65rem 0.75rem;
+  }
+
+  .splash-screen {
+    padding: 1rem;
+  }
+
+  .splash-card {
+    padding: 1.35rem;
+    border-radius: 1.1rem;
+  }
+
+  .splash-card h1 {
+    font-size: 2.25rem;
+  }
+
+  .splash-card > p {
+    font-size: 0.9rem;
+    line-height: 1.55;
+  }
+
+  .splash-details {
+    display: grid;
+    gap: 0.45rem;
+    margin: 1.1rem 0;
+  }
+
+  .splash-details span {
+    font-size: 0.75rem;
+  }
+
+  .start-button {
+    width: 100%;
+    padding: 0.8rem 1rem;
   }
 }
 
@@ -852,24 +853,20 @@ body.mode-compare .chart-panel {
   }
 
   .compare-tab {
-    font-size: 0.62rem;
-    padding: 0.5rem 0.15rem;
+    font-size: 0.6rem;
+    padding: 0.5rem 0.12rem;
   }
 
   .region-jump {
     padding: 0.38rem 0.55rem;
   }
 
-  .region-jump label {
-    display: none;
-  }
-
   .region-jump select {
-    font-size: 0.72rem;
+    font-size: 0.78rem;
   }
 
   .mapboxgl-ctrl-top-right {
-    top: 96px;
+    top: 110px;
   }
 
   .story-panel {
@@ -883,13 +880,41 @@ body.mode-compare .chart-panel {
   }
 
   .story-panel p {
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     line-height: 1.35;
-    max-height: 95px;
+    max-height: 82px;
+  }
+
+  .chart-panel {
+    left: 0.55rem;
+    right: 0.55rem;
+    bottom: 9.7rem;
+    padding: 0.65rem 0.7rem;
+  }
+
+  .chart-panel h3 {
+    font-size: 0.78rem;
+  }
+
+  .bar-row {
+    grid-template-columns: 32px 1fr 36px;
+    font-size: 0.62rem;
+  }
+
+  .change-box {
+    padding: 0.38rem 0.42rem;
+  }
+
+  .change-box strong {
+    font-size: 0.78rem;
+  }
+
+  .change-box span {
+    font-size: 0.58rem;
   }
 
   .compare-switch {
-    bottom: 18%;
+    bottom: 19%;
   }
 
   .splash-card h1 {
