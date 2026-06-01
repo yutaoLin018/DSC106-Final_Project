@@ -968,17 +968,24 @@ async function updateRegionCharts(viewName) {
 }
 
 function setupMobileChartToggle() {
-  const button = document.querySelector("#mobile-chart-toggle");
+  const toggleButton = document.querySelector("#mobile-chart-toggle");
+  const closeButton = document.querySelector("#chart-close-button");
   const chartPanel = document.querySelector(".chart-panel");
 
-  if (!button || !chartPanel) return;
+  if (!toggleButton || !chartPanel) return;
 
-  button.addEventListener("click", () => {
+  toggleButton.addEventListener("click", () => {
     if (currentMode === "compare") return;
 
     const isOpen = document.body.classList.toggle("mobile-chart-open");
-    button.textContent = isOpen ? "Hide Summary" : "Summary";
+    toggleButton.textContent = isOpen ? "Hide Summary" : "Summary";
   });
+
+  if (closeButton) {
+    closeButton.addEventListener("click", () => {
+      closeMobileChart();
+    });
+  }
 }
 
 function closeMobileChart() {

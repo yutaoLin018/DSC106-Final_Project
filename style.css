@@ -450,10 +450,39 @@ body.mode-compare .compare-switch {
   pointer-events: auto;
 }
 
+.chart-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.chart-panel-header h3 {
+  margin: 0;
+}
+
 .chart-panel h3 {
   margin: 0 0 0.8rem;
   font-size: 1rem;
   line-height: 1.2;
+}
+
+.chart-close-button {
+  display: none;
+  border: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.08);
+  color: #111;
+  font: inherit;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.chart-close-button:hover {
+  background: rgba(0, 0, 0, 0.14);
 }
 
 .mini-chart-block {
@@ -787,6 +816,16 @@ body.mode-compare .chart-panel {
     margin-bottom: 0.45rem;
   }
 
+  .chart-panel-header h3 {
+    margin: 0;
+  }
+
+  .chart-close-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   .mini-chart-block {
     margin-top: 0.5rem;
   }
@@ -953,6 +992,12 @@ body.mode-compare .chart-panel {
 
   .chart-panel h3 {
     font-size: 0.78rem;
+  }
+
+  .chart-close-button {
+    width: 1.55rem;
+    height: 1.55rem;
+    font-size: 1.1rem;
   }
 
   .bar-row {
