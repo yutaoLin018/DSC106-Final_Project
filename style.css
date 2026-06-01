@@ -25,6 +25,129 @@ body {
 }
 
 /* =========================
+   Splash screen
+   ========================= */
+
+.splash-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(36, 153, 113, 0.18), transparent 32%),
+    radial-gradient(circle at 80% 70%, rgba(217, 95, 61, 0.14), transparent 28%),
+    rgba(245, 244, 239, 0.96);
+  backdrop-filter: blur(8px);
+  transition: opacity 0.55s ease, visibility 0.55s ease;
+}
+
+.splash-screen.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.splash-card {
+  width: min(720px, 100%);
+  padding: clamp(1.5rem, 4vw, 3rem);
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid var(--border);
+  border-radius: 1.5rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.16);
+  text-align: left;
+}
+
+.splash-kicker {
+  margin: 0 0 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--growth);
+}
+
+.splash-card h1 {
+  margin: 0 0 1rem;
+  font-size: clamp(2.3rem, 6vw, 4.5rem);
+  line-height: 0.95;
+  color: var(--text);
+}
+
+.splash-card > p {
+  max-width: 620px;
+  margin: 0;
+  font-size: clamp(0.95rem, 1.4vw, 1.15rem);
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+.splash-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 1.5rem 0;
+}
+
+.splash-details span {
+  padding: 0.45rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.06);
+  font-size: 0.82rem;
+  color: #333;
+}
+
+.start-button {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.85rem 1.3rem;
+  background: #111;
+  color: white;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.16);
+}
+
+.start-button:hover {
+  background: #249971;
+}
+
+.start-button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.loading-status {
+  margin-top: 0.9rem !important;
+  font-size: 0.8rem !important;
+  color: var(--muted);
+}
+
+/* Hide chart panel in compare mode */
+body.mode-compare .chart-panel {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+@media (max-width: 650px) {
+  .splash-screen {
+    padding: 1rem;
+  }
+
+  .splash-card {
+    padding: 1.4rem;
+  }
+
+  .splash-details {
+    display: grid;
+  }
+}
+
+/* =========================
    Responsive Top UI
    ========================= */
 

@@ -96,6 +96,7 @@ let cachedData = {};
 let cachedChangeData = {};
 let syncing = false;
 let isLoadingDetail = false;
+let appReady = false;
 
 let activeDetail = {
   present: "low",
@@ -136,6 +137,8 @@ rightMap.addControl(new mapboxgl.NavigationControl(), "bottom-right");
 
 const maps = [singleMap, leftMap, rightMap];
 
+setupSplashScreen();
+
 Promise.all(maps.map(waitForMapLoad)).then(initAllMaps);
 
 function waitForMapLoad(map) {
@@ -148,6 +151,8 @@ async function initAllMaps() {
   removeMapLighting(singleMap);
   removeMapLighting(leftMap);
   removeMapLighting(rightMap);
+
+  updateSplashStatus("Loading 2025 vegetation layer...");
 
   const data2025Low = await getGeoJSON("2025", "low");
 
@@ -211,6 +216,10 @@ async function initAllMaps() {
   resizeMaps();
 
   preloadLikelyNextFiles();
+
+  appReady = true;
+  updateSplashStatus("Map ready. Click Start to explore.");
+  enableStartButton();
 }
 
 function removeMapLighting(map) {
@@ -575,6 +584,7 @@ function setupRegionJump() {
     activeView = viewName;
     updateStoryPanel(viewName);
 
+    // Use the selected region variable, not "global" or "viewName" as text.
     await updateRegionCharts(viewName);
 
     await flyAllTo(viewName);
@@ -935,6 +945,44 @@ async function updateRegionCharts(viewName) {
 
   const stats = await computeRegionChartStats(viewName);
   renderRegionCharts(viewName, stats);
+}
+
+function updateSplashStatus(message) {
+  const status = document.querySelector("#loading-status");
+
+  if (status) {
+    status.textContent = message;
+  }
+}
+
+function enableStartButton() {
+  const button = document.querySelector("#start-button");
+
+  if (!button) return;
+
+  button.disabled = false;
+  button.textContent = "Start Exploring";
+}
+
+function setupSplashScreen() {
+  const splash = document.querySelector("#splash-screen");
+  const button = document.querySelector("#start-button");
+
+  if (!splash || !button) return;
+
+  button.disabled = true;
+  button.textContent = "Loading Map...";
+
+  button.addEventListener("click", () => {
+    if (!appReady) return;
+
+    splash.classList.add("hidden");
+
+    setTimeout(() => {
+      splash.remove();
+      resizeMaps();
+    }, 600);
+  });
 }
 
 // Register service worker for local data caching.
