@@ -50,6 +50,15 @@ const storyText = {
   }
 };
 
+const regionBounds = {
+  global: [-180, 180, -60, 85],
+  amazon: [-80, -45, -20, 10],
+  sahel: [-20, 35, 5, 20],
+  china: [95, 125, 35, 47]
+};
+
+const chartStatsCache = {};
+
 const spikeFilesByDetail = {
   "2000": {
     low: "data/actual_ndvi_spikes_2000_low.json",
@@ -189,6 +198,7 @@ async function initAllMaps() {
   setupDetailSwitching();
 
   updateStoryPanel("global");
+  updateRegionCharts("global");
 
   document.body.classList.remove("mode-compare", "mode-change");
   document.body.classList.add("mode-present");
@@ -564,6 +574,9 @@ function setupRegionJump() {
 
     activeView = viewName;
     updateStoryPanel(viewName);
+
+    await updateRegionCharts(viewName);
+
     await flyAllTo(viewName);
   });
 }
@@ -757,6 +770,171 @@ function resizeMaps() {
     leftMap.resize();
     rightMap.resize();
   }, 250);
+}
+
+function featureCenter(feature) {
+  const coords = feature.geometry.coordinates[0];
+
+  let lonSum = 0;
+  let latSum = 0;
+
+  for (let i = 0; i < coords.length; i++) {
+    lonSum += coords[i][0];
+    latSum += coords[i][1];
+  }
+
+  return {
+    lon: lonSum / coords.length,
+    lat: latSum / coords.length
+  };
+}
+
+function pointInBounds(lon, lat, bounds) {
+  const [lonMin, lonMax, latMin, latMax] = bounds;
+  return lon >= lonMin && lon <= lonMax && lat >= latMin && lat <= latMax;
+}
+
+function mean(values) {
+  if (!values.length) return null;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+async function computeRegionChartStats(viewName) {
+  const cacheKey = `${viewName}-medium`;
+
+  if (chartStatsCache[cacheKey]) {
+    return chartStatsCache[cacheKey];
+  }
+
+  const bounds = regionBounds[viewName] || regionBounds.global;
+
+  const data2000 = await getGeoJSON("2000", "medium");
+  const data2013 = await getGeoJSON("2013", "medium");
+  const data2025 = await getGeoJSON("2025", "medium");
+  const changeData = await getChangeGeoJSON("medium");
+
+  function collectMeanNDVI(data) {
+    const values = [];
+
+    data.features.forEach(feature => {
+      const center = featureCenter(feature);
+
+      if (!pointInBounds(center.lon, center.lat, bounds)) return;
+
+      const ndvi = Number(feature.properties.ndvi);
+
+      if (Number.isFinite(ndvi)) {
+        values.push(ndvi);
+      }
+    });
+
+    return mean(values);
+  }
+
+  let growthCount = 0;
+  let declineCount = 0;
+
+  changeData.features.forEach(feature => {
+    const center = featureCenter(feature);
+
+    if (!pointInBounds(center.lon, center.lat, bounds)) return;
+
+    const change = Number(feature.properties.change);
+
+    if (change > 0) growthCount += 1;
+    if (change < 0) declineCount += 1;
+  });
+
+  const totalChange = growthCount + declineCount;
+
+  const stats = {
+    ndvi: {
+      2000: collectMeanNDVI(data2000),
+      2013: collectMeanNDVI(data2013),
+      2025: collectMeanNDVI(data2025)
+    },
+    change: {
+      growthPct: totalChange ? growthCount / totalChange : 0,
+      declinePct: totalChange ? declineCount / totalChange : 0
+    }
+  };
+
+  chartStatsCache[cacheKey] = stats;
+  return stats;
+}
+
+function renderRegionCharts(viewName, stats) {
+  const chartTitle = document.querySelector("#chart-title");
+  const ndviChart = document.querySelector("#ndvi-bar-chart");
+  const changeChart = document.querySelector("#change-summary-chart");
+  const caption = document.querySelector("#chart-caption");
+
+  if (!chartTitle || !ndviChart || !changeChart || !caption) return;
+
+  const title = storyText[viewName]?.title || "Global Overview";
+  chartTitle.textContent = `${title} Summary`;
+
+  const years = ["2000", "2013", "2025"];
+
+  ndviChart.innerHTML = years.map(year => {
+    const value = stats.ndvi[year];
+    const safeValue = value === null ? 0 : value;
+    const width = Math.max(3, Math.min(100, safeValue * 100));
+
+    return `
+      <div class="bar-row">
+        <span>${year}</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${width}%"></div>
+        </div>
+        <span>${value === null ? "N/A" : value.toFixed(3)}</span>
+      </div>
+    `;
+  }).join("");
+
+  const growthPct = Math.round(stats.change.growthPct * 100);
+  const declinePct = Math.round(stats.change.declinePct * 100);
+
+  changeChart.innerHTML = `
+    <div class="change-box growth">
+      <strong>${growthPct}%</strong>
+      <span>growth cells</span>
+    </div>
+    <div class="change-box decline">
+      <strong>${declinePct}%</strong>
+      <span>decline cells</span>
+    </div>
+  `;
+
+  caption.textContent =
+    "Chart values are calculated from the medium-detail MODIS NDVI spike data for the selected map region.";
+}
+
+async function updateRegionCharts(viewName) {
+  const chartTitle = document.querySelector("#chart-title");
+  const ndviChart = document.querySelector("#ndvi-bar-chart");
+  const changeChart = document.querySelector("#change-summary-chart");
+  const caption = document.querySelector("#chart-caption");
+
+  if (chartTitle) {
+    const title = storyText[viewName]?.title || "Global Overview";
+    chartTitle.textContent = `${title} Summary`;
+  }
+
+  if (ndviChart) {
+    ndviChart.innerHTML = `<div class="chart-loading">Loading regional data...</div>`;
+  }
+
+  if (changeChart) {
+    changeChart.innerHTML = "";
+  }
+
+  if (caption) {
+    caption.textContent = "Calculating summary for the selected region...";
+  }
+
+  const stats = await computeRegionChartStats(viewName);
+  renderRegionCharts(viewName, stats);
 }
 
 // Register service worker for local data caching.
