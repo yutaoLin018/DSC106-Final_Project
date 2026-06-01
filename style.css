@@ -133,17 +133,159 @@ body.mode-compare .chart-panel {
   pointer-events: none;
 }
 
+/* =========================
+   Mobile layout
+   ========================= */
+
 @media (max-width: 650px) {
+  html,
+  body {
+    overflow: hidden;
+  }
+
+  .top-ui {
+    flex-wrap: wrap;
+    padding: 0;
+    background: rgba(245, 244, 239, 0.94);
+    backdrop-filter: blur(8px);
+  }
+
+  .brand {
+    display: none;
+  }
+
+  .compare-tabs {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .compare-tab {
+    min-width: 0;
+    width: 100%;
+    font-size: 0.68rem;
+    line-height: 1.1;
+    padding: 0.55rem 0.2rem;
+  }
+
+  .compare-tab small {
+    display: none;
+  }
+
+  .compare-tab.selected {
+    transform: none;
+    border-top: 3px solid #2b65d9;
+  }
+
+  .region-jump {
+    width: 100%;
+    flex: none;
+    justify-content: center;
+    padding: 0.45rem 0.65rem;
+    gap: 0.45rem;
+    background: rgba(255, 255, 255, 0.95);
+  }
+
+  .region-jump label {
+    flex: 0 0 auto;
+    font-size: 0.7rem;
+  }
+
+  .region-jump select {
+    flex: 1;
+    width: auto;
+    max-width: none;
+    min-width: 0;
+    font-size: 0.76rem;
+    padding: 0.42rem 0.55rem;
+  }
+
+  .mapboxgl-ctrl-top-right {
+    top: 104px;
+    right: 8px;
+  }
+
+  .story-panel {
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: 0.75rem;
+    width: auto;
+    max-width: none;
+  }
+
+  .story-panel h2 {
+    font-size: 1.15rem;
+    margin-bottom: 0.45rem;
+  }
+
+  .story-panel p {
+    font-size: 0.76rem;
+    line-height: 1.42;
+    padding: 0.72rem 0.8rem;
+    border-radius: 0.8rem;
+    max-height: 120px;
+    overflow-y: auto;
+  }
+
+  .chart-panel {
+    display: none;
+  }
+
+  .compare-switch {
+    bottom: 20%;
+  }
+
+  .compare-year-option,
+  .compare-current-year {
+    font-size: 0.72rem;
+    min-width: 46px;
+    padding: 0.28rem 0.38rem;
+  }
+
+  .split-line {
+    width: 3px;
+  }
+
+  .mapboxgl-popup {
+    max-width: 220px !important;
+  }
+
+  .mapboxgl-popup-content {
+    font-size: 0.75rem;
+    padding: 0.65rem 0.75rem;
+  }
+
   .splash-screen {
     padding: 1rem;
   }
 
   .splash-card {
-    padding: 1.4rem;
+    padding: 1.35rem;
+    border-radius: 1.1rem;
+  }
+
+  .splash-card h1 {
+    font-size: 2.25rem;
+  }
+
+  .splash-card > p {
+    font-size: 0.9rem;
+    line-height: 1.55;
   }
 
   .splash-details {
     display: grid;
+    gap: 0.45rem;
+    margin: 1.1rem 0;
+  }
+
+  .splash-details span {
+    font-size: 0.75rem;
+  }
+
+  .start-button {
+    width: 100%;
+    padding: 0.8rem 1rem;
   }
 }
 
@@ -701,40 +843,56 @@ body.mode-compare .chart-panel {
 }
 
 /* =========================
-   Very small screens
+   Very small phones
    ========================= */
 
 @media (max-width: 420px) {
   .compare-tabs {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, 1fr);
   }
 
   .compare-tab {
-    padding: 0.48rem 0.35rem;
-  }
-
-  .compare-tab.selected {
-    transform: none;
+    font-size: 0.62rem;
+    padding: 0.5rem 0.15rem;
   }
 
   .region-jump {
-    padding: 0.4rem 0.6rem;
+    padding: 0.38rem 0.55rem;
+  }
+
+  .region-jump label {
+    display: none;
+  }
+
+  .region-jump select {
+    font-size: 0.72rem;
   }
 
   .mapboxgl-ctrl-top-right {
-    top: 165px;
+    top: 96px;
   }
 
   .story-panel {
-    bottom: 3vh;
+    left: 0.55rem;
+    right: 0.55rem;
+    bottom: 0.55rem;
   }
 
   .story-panel h2 {
-    font-size: 1.3rem;
+    font-size: 1rem;
   }
 
   .story-panel p {
-    font-size: 0.8rem;
-    line-height: 1.45;
+    font-size: 0.72rem;
+    line-height: 1.35;
+    max-height: 95px;
+  }
+
+  .compare-switch {
+    bottom: 18%;
+  }
+
+  .splash-card h1 {
+    font-size: 2rem;
   }
 }

@@ -31,6 +31,20 @@ const views = {
   }
 };
 
+if (window.innerWidth <= 650) {
+  views.global.zoom = 1.25;
+  views.global.pitch = 15;
+
+  views.amazon.zoom = 3.45;
+  views.amazon.pitch = 45;
+
+  views.sahel.zoom = 3.65;
+  views.sahel.pitch = 45;
+
+  views.china.zoom = 3.75;
+  views.china.pitch = 45;
+}
+
 const storyText = {
   global: {
     title: "Global Vegetation Change",
