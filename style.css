@@ -537,6 +537,12 @@ body.mode-compare .compare-switch {
   color: var(--muted);
 }
 
+/* Mobile chart button is hidden on desktop */
+
+.mobile-chart-toggle {
+  display: none;
+}
+
 /* Hide chart panel in compare mode */
 body.mode-compare .chart-panel {
   opacity: 0;
@@ -718,17 +724,62 @@ body.mode-compare .chart-panel {
     pointer-events: auto;
   }
 
-  /* Show chart on mobile, but make it compact */
+  /* Mobile summary button */
+  .mobile-chart-toggle {
+    display: block;
+    position: absolute;
+    right: 0.75rem;
+    bottom: 9.2rem;
+    z-index: 38;
+
+    border: 0;
+    border-radius: 999px;
+    padding: 0.6rem 0.85rem;
+
+    background: #111;
+    color: white;
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+  }
+
+  .mobile-chart-toggle:active {
+    transform: scale(0.96);
+  }
+
+  body.mobile-chart-open .mobile-chart-toggle {
+    background: #249971;
+  }
+
+  /* Mobile chart as hidden bottom sheet */
   .chart-panel {
     display: block;
     left: 0.75rem;
     right: 0.75rem;
-    bottom: 11.2rem;
+    bottom: 0.75rem;
     width: auto;
     max-width: none;
     padding: 0.75rem 0.85rem;
     border-radius: 0.85rem;
-    z-index: 34;
+    z-index: 40;
+
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(1rem);
+    transition:
+      opacity 0.25s ease,
+      visibility 0.25s ease,
+      transform 0.25s ease;
+  }
+
+  body.mobile-chart-open .chart-panel {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
   }
 
   .chart-panel h3 {
@@ -780,8 +831,9 @@ body.mode-compare .chart-panel {
     display: none;
   }
 
-  /* Still hide chart in compare mode */
-  body.mode-compare .chart-panel {
+  /* Hide both chart and mobile chart button in compare mode */
+  body.mode-compare .chart-panel,
+  body.mode-compare .mobile-chart-toggle {
     display: none;
   }
 
@@ -885,10 +937,17 @@ body.mode-compare .chart-panel {
     max-height: 82px;
   }
 
+  .mobile-chart-toggle {
+    right: 0.55rem;
+    bottom: 8.1rem;
+    font-size: 0.72rem;
+    padding: 0.52rem 0.75rem;
+  }
+
   .chart-panel {
     left: 0.55rem;
     right: 0.55rem;
-    bottom: 9.7rem;
+    bottom: 0.55rem;
     padding: 0.65rem 0.7rem;
   }
 

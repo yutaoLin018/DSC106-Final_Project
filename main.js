@@ -31,6 +31,7 @@ const views = {
   }
 };
 
+// Easier camera on mobile
 if (window.innerWidth <= 650) {
   views.global.zoom = 1.25;
   views.global.pitch = 15;
@@ -210,6 +211,7 @@ async function initAllMaps() {
   setupTopTabs();
   setupCompareYearSwitch();
   setupRegionJump();
+  setupMobileChartToggle();
   setupPopup(singleMap);
   setupPopup(leftMap);
   setupPopup(rightMap);
@@ -472,6 +474,7 @@ function setupTopTabs() {
       tabs.forEach(t => t.classList.remove("selected"));
       tab.classList.add("selected");
 
+      closeMobileChart();
       await setMode(tab.dataset.mode);
     });
   });
@@ -519,6 +522,8 @@ async function setMode(mode) {
   document.body.classList.add(`mode-${mode}`);
 
   if (mode === "compare") {
+    closeMobileChart();
+
     const detail = detailFromZoom(previousCamera.zoom, activeView);
 
     const leftData = await getGeoJSON(compareBaseYear, detail);
@@ -598,8 +603,9 @@ function setupRegionJump() {
     activeView = viewName;
     updateStoryPanel(viewName);
 
-    // Use the selected region variable, not "global" or "viewName" as text.
     await updateRegionCharts(viewName);
+
+    closeMobileChart();
 
     await flyAllTo(viewName);
   });
@@ -959,6 +965,30 @@ async function updateRegionCharts(viewName) {
 
   const stats = await computeRegionChartStats(viewName);
   renderRegionCharts(viewName, stats);
+}
+
+function setupMobileChartToggle() {
+  const button = document.querySelector("#mobile-chart-toggle");
+  const chartPanel = document.querySelector(".chart-panel");
+
+  if (!button || !chartPanel) return;
+
+  button.addEventListener("click", () => {
+    if (currentMode === "compare") return;
+
+    const isOpen = document.body.classList.toggle("mobile-chart-open");
+    button.textContent = isOpen ? "Hide Summary" : "Summary";
+  });
+}
+
+function closeMobileChart() {
+  const button = document.querySelector("#mobile-chart-toggle");
+
+  document.body.classList.remove("mobile-chart-open");
+
+  if (button) {
+    button.textContent = "Summary";
+  }
 }
 
 function updateSplashStatus(message) {
