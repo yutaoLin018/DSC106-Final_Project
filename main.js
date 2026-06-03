@@ -53,15 +53,15 @@ const storyText = {
   },
   amazon: {
     title: "Amazon Basin",
-    text: "The Amazon region is one of the most important areas to examine because it contains large tropical forests and zones of land-use change. The change layer helps highlight where vegetation appears to have declined or shifted over time."
+    text: "The Amazon Basin remains one of the greenest regions in the dataset, with average NDVI staying high across 2000, 2013, and 2025. However, the chart also shows that not all areas moved in the same direction: about 35% of changed cells show vegetation decline. These orange patches may reflect land-use pressure along deforestation frontiers, where forest has been cleared for cattle ranching, farming, roads, and settlement. In Brazil, INPE’s PRODES program monitors Amazon deforestation with satellite data, and NASA has shown that MODIS vegetation-index imagery can reveal where forest loss is most intense. The map therefore shows both the Amazon’s continued high vegetation density and the uneven signs of human-driven forest loss."
   },
   sahel: {
     title: "Sahel / West Africa",
-    text: "The Sahel sits between the Sahara Desert and the greener regions of West Africa. This area is useful for studying vegetation recovery, drought stress, and changing dryland conditions across time."
+    text: "The Sahel is a transition zone between the Sahara Desert and the wetter landscapes of West Africa, so small changes in rainfall, land use, and drought can strongly affect vegetation. In this map, average NDVI rises from about 0.391 in 2000 to 0.405 in 2025, and the chart shows more growth cells than decline cells. This fits with research showing that parts of the Sahel have experienced “re-greening” since the severe droughts of the late twentieth century, partly linked to rainfall recovery. However, the orange decline areas show that this recovery is uneven: dryland degradation, grazing pressure, farming expansion, and recurring drought still affect many places. The Great Green Wall initiative also reflects this regional challenge, aiming to restore degraded landscapes across the Sahel rather than treating the region as uniformly recovered."
   },
   china: {
     title: "Northern China / Inner Mongolia",
-    text: "Northern China and Inner Mongolia are included because this region has experienced major land restoration and anti-desertification efforts. The map can help show where vegetation has expanded or declined near dryland and grassland areas."
+    text: "Northern China and Inner Mongolia show one of the clearest greening signals in this project. In the chart, average NDVI rises from about 0.296 in 2000 to 0.409 in 2025, and nearly all changed cells are classified as vegetation growth. This pattern matches research showing strong greening across parts of northern China, especially in regions affected by ecological restoration programs such as the Three-North Shelter Forest Program and Grain for Green. These projects were designed to reduce desertification, soil erosion, and dust-storm impacts by restoring vegetation in dryland and grassland areas. However, the map should not be read as a simple success story everywhere: small orange patches remain, and researchers note that climate variability, grazing pressure, water limits, and local land-use changes can still produce uneven outcomes across Inner Mongolia’s fragile drylands."
   }
 };
 
