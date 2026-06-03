@@ -48,8 +48,8 @@ if (window.innerWidth <= 650) {
 
 const storyText = {
   global: {
-    title: "Global Vegetation Change",
-    text: "This map uses MODIS NDVI data to show how vegetation has changed across the world. Green spikes represent areas where vegetation increased between 2000 and 2025, while orange spikes represent areas where vegetation declined. Taller spikes indicate larger changes."
+    title: "Global Vegetation Growth",
+    text: "Across the world, vegetation has not changed evenly. This map uses MODIS NDVI satellite data to show where plant life appears to have expanded, declined, or remained relatively stable from 2000 to 2025. Green spikes highlight areas of vegetation growth, while orange spikes show decline. The global view gives readers a broad overview before they zoom into specific regions to explore local patterns."
   },
   amazon: {
     title: "Amazon Basin",
