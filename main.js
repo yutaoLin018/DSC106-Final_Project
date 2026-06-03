@@ -31,7 +31,7 @@ const views = {
   }
 };
 
-// Easier camera on mobile
+// Easier camera on mobile.
 if (window.innerWidth <= 650) {
   views.global.zoom = 1.25;
   views.global.pitch = 15;
@@ -73,6 +73,12 @@ const regionBounds = {
 };
 
 const chartStatsCache = {};
+
+let previousNdviBarWidths = {
+  "2000": 0,
+  "2013": 0,
+  "2025": 0
+};
 
 const spikeFilesByDetail = {
   "2000": {
@@ -212,6 +218,7 @@ async function initAllMaps() {
   setupCompareYearSwitch();
   setupRegionJump();
   setupMobileChartToggle();
+  setupAboutModal();
   setupPopup(singleMap);
   setupPopup(leftMap);
   setupPopup(rightMap);
@@ -257,8 +264,6 @@ function preloadLikelyNextFiles() {
     getGeoJSON("2025", "medium");
     getGeoJSON("2000", "medium");
     getGeoJSON("2013", "medium");
-
-    // Preload medium change file because regional change mode often uses it.
     getChangeGeoJSON("medium");
   }, 1500);
 }
@@ -909,18 +914,37 @@ function renderRegionCharts(viewName, stats) {
   ndviChart.innerHTML = years.map(year => {
     const value = stats.ndvi[year];
     const safeValue = value === null ? 0 : value;
-    const width = Math.max(3, Math.min(100, safeValue * 100));
+
+    const targetWidth = Math.max(3, Math.min(100, safeValue * 100));
+    const startWidth = previousNdviBarWidths[year] ?? 0;
 
     return `
       <div class="bar-row">
         <span>${year}</span>
         <div class="bar-track">
-          <div class="bar-fill" style="width:${width}%"></div>
+          <div
+            class="bar-fill"
+            data-year="${year}"
+            data-target-width="${targetWidth}"
+            style="width: ${startWidth}%;"
+          ></div>
         </div>
         <span>${value === null ? "N/A" : value.toFixed(3)}</span>
       </div>
     `;
   }).join("");
+
+  requestAnimationFrame(() => {
+    const bars = ndviChart.querySelectorAll(".bar-fill");
+
+    bars.forEach(bar => {
+      const year = bar.dataset.year;
+      const targetWidth = Number(bar.dataset.targetWidth);
+
+      bar.style.width = `${targetWidth}%`;
+      previousNdviBarWidths[year] = targetWidth;
+    });
+  });
 
   const growthPct = Math.round(stats.change.growthPct * 100);
   const declinePct = Math.round(stats.change.declinePct * 100);
@@ -943,7 +967,6 @@ function renderRegionCharts(viewName, stats) {
 async function updateRegionCharts(viewName) {
   const chartTitle = document.querySelector("#chart-title");
   const ndviChart = document.querySelector("#ndvi-bar-chart");
-  const changeChart = document.querySelector("#change-summary-chart");
   const caption = document.querySelector("#chart-caption");
 
   if (chartTitle) {
@@ -951,12 +974,8 @@ async function updateRegionCharts(viewName) {
     chartTitle.textContent = `${title} Summary`;
   }
 
-  if (ndviChart) {
+  if (ndviChart && !ndviChart.querySelector(".bar-row")) {
     ndviChart.innerHTML = `<div class="chart-loading">Loading regional data...</div>`;
-  }
-
-  if (changeChart) {
-    changeChart.innerHTML = "";
   }
 
   if (caption) {
@@ -996,6 +1015,38 @@ function closeMobileChart() {
   if (button) {
     button.textContent = "Summary";
   }
+}
+
+function setupAboutModal() {
+  const openButton = document.querySelector("#about-button");
+  const closeButton = document.querySelector("#about-close-button");
+  const modal = document.querySelector("#about-modal");
+
+  if (!openButton || !closeButton || !modal) return;
+
+  openButton.addEventListener("click", () => {
+    document.body.classList.add("about-open");
+    modal.setAttribute("aria-hidden", "false");
+  });
+
+  closeButton.addEventListener("click", () => {
+    document.body.classList.remove("about-open");
+    modal.setAttribute("aria-hidden", "true");
+  });
+
+  modal.addEventListener("click", event => {
+    if (event.target === modal) {
+      document.body.classList.remove("about-open");
+      modal.setAttribute("aria-hidden", "true");
+    }
+  });
+
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape") {
+      document.body.classList.remove("about-open");
+      modal.setAttribute("aria-hidden", "true");
+    }
+  });
 }
 
 function updateSplashStatus(message) {

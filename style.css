@@ -25,6 +25,116 @@ body {
 }
 
 /* =========================
+   About modal
+   ========================= */
+
+.about-button {
+  display: block;
+  margin-top: 0.3rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #444;
+  font: inherit;
+  font-size: clamp(0.65rem, 0.8vw, 0.75rem);
+  cursor: pointer;
+  text-align: left;
+}
+
+.about-button:hover {
+  color: var(--growth);
+  text-decoration: underline;
+}
+
+.about-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 180;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: rgba(0, 0, 0, 0.28);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+body.about-open .about-modal {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.about-card {
+  position: relative;
+  width: min(680px, 100%);
+  max-height: min(760px, 88vh);
+  overflow-y: auto;
+  padding: 2rem;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.22);
+}
+
+.about-close-button {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  border: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.08);
+  color: #111;
+  font: inherit;
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.about-close-button:hover {
+  background: rgba(0, 0, 0, 0.14);
+}
+
+.about-kicker {
+  margin: 0 0 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--growth);
+}
+
+.about-card h2 {
+  margin: 0 0 1rem;
+  font-size: 2rem;
+}
+
+.about-card h3 {
+  margin: 1.35rem 0 0.4rem;
+  font-size: 1rem;
+}
+
+.about-card p {
+  margin: 0;
+  line-height: 1.65;
+  color: var(--muted);
+}
+
+.about-card a {
+  color: var(--growth);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.about-card a:hover {
+  text-decoration: underline;
+}
+
+/* =========================
    Splash screen
    ========================= */
 
@@ -159,15 +269,6 @@ body {
   line-height: 1.1;
 }
 
-.brand span {
-  display: block;
-  margin-top: 0.3rem;
-  font-size: clamp(0.65rem, 0.8vw, 0.75rem);
-  color: #444;
-}
-
-/* Center tabs */
-
 .compare-tabs {
   flex: 0 1 auto;
   display: flex;
@@ -221,8 +322,6 @@ body {
   color: var(--decline);
 }
 
-/* Jump menu */
-
 .region-jump {
   flex: 0 1 300px;
   padding: 0.85rem 0;
@@ -256,8 +355,6 @@ body {
   box-shadow: 0 2px 7px rgba(0, 0, 0, 0.14);
 }
 
-/* Keep Mapbox controls below the top UI */
-
 .mapboxgl-ctrl-top-right {
   top: 90px;
   right: 10px;
@@ -273,8 +370,6 @@ body {
   height: 100vh;
   overflow: hidden;
 }
-
-/* Important: do not use display:none for Mapbox containers */
 
 #single-map,
 #compare-view {
@@ -301,8 +396,6 @@ body {
   height: 100vh;
 }
 
-/* Present and change use single map */
-
 body.mode-present #single-map,
 body.mode-change #single-map {
   opacity: 1;
@@ -310,16 +403,12 @@ body.mode-change #single-map {
   pointer-events: auto;
 }
 
-/* Compare uses two real map containers */
-
 body.mode-compare #compare-view {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
   display: grid;
 }
-
-/* Divider */
 
 .split-line {
   position: absolute;
@@ -517,8 +606,17 @@ body.mode-compare .compare-switch {
 
 .bar-fill {
   height: 100%;
+  width: 0%;
   background: #249971;
   border-radius: 999px;
+  transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: width;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar-fill {
+    transition: none;
+  }
 }
 
 .chart-loading {
@@ -566,13 +664,10 @@ body.mode-compare .compare-switch {
   color: var(--muted);
 }
 
-/* Mobile chart button is hidden on desktop */
-
 .mobile-chart-toggle {
   display: none;
 }
 
-/* Hide chart panel in compare mode */
 body.mode-compare .chart-panel {
   opacity: 0;
   visibility: hidden;
@@ -725,7 +820,6 @@ body.mode-compare .chart-panel {
     right: 8px;
   }
 
-  /* Mobile bottom information drawer */
   .story-panel {
     left: 0.75rem;
     right: 0.75rem;
@@ -753,7 +847,6 @@ body.mode-compare .chart-panel {
     pointer-events: auto;
   }
 
-  /* Mobile summary button */
   .mobile-chart-toggle {
     display: block;
     position: absolute;
@@ -782,7 +875,6 @@ body.mode-compare .chart-panel {
     background: #249971;
   }
 
-  /* Mobile chart as hidden bottom sheet */
   .chart-panel {
     display: block;
     left: 0.75rem;
@@ -870,7 +962,6 @@ body.mode-compare .chart-panel {
     display: none;
   }
 
-  /* Hide both chart and mobile chart button in compare mode */
   body.mode-compare .chart-panel,
   body.mode-compare .mobile-chart-toggle {
     display: none;
@@ -898,6 +989,19 @@ body.mode-compare .chart-panel {
   .mapboxgl-popup-content {
     font-size: 0.75rem;
     padding: 0.65rem 0.75rem;
+  }
+
+  .about-modal {
+    padding: 1rem;
+  }
+
+  .about-card {
+    padding: 1.35rem;
+    border-radius: 1rem;
+  }
+
+  .about-card h2 {
+    font-size: 1.55rem;
   }
 
   .splash-screen {

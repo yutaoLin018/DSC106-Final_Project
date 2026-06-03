@@ -30,6 +30,60 @@
 </head>
 
 <body class="mode-present">
+  <section id="about-modal" class="about-modal" aria-hidden="true">
+    <div class="about-card">
+      <button
+        id="about-close-button"
+        class="about-close-button"
+        aria-label="Close about panel"
+      >
+        ×
+      </button>
+
+      <p class="about-kicker">About this project</p>
+      <h2>The Greening Earth</h2>
+
+      <p>
+        This project explores how global vegetation has changed over time using
+        MODIS NDVI satellite data. We convert vegetation intensity and long-term
+        change into 3D map spikes so readers can compare broad global patterns
+        and then zoom into selected regions.
+      </p>
+
+      <h3>What the map shows</h3>
+      <p>
+        Green spikes represent areas where vegetation increased, while orange
+        spikes represent areas where vegetation declined. Taller spikes indicate
+        stronger vegetation intensity or larger change.
+      </p>
+
+      <h3>Dataset and method</h3>
+      <p>
+        The visualization uses MODIS NDVI data for selected years. The data is
+        aggregated into map cells at different detail levels so the webpage can
+        load smoothly while still preserving regional vegetation patterns. The
+        change view compares vegetation values between 2000 and 2025.
+      </p>
+
+      <h3>Team</h3>
+      <p>
+        <br />
+        Yutao Lin, Kang Lee, Jacob Kavanal, Raffi Dulgerian
+      </p>
+
+      <h3>Links</h3>
+      <p>
+        <a
+          href="https://github.com/yutaolin018/DSC106-Final_Project"
+          target="_blank"
+          rel="noopener"
+        >
+          View the GitHub repository
+        </a>
+      </p>
+    </div>
+  </section>
+
   <section id="splash-screen" class="splash-screen">
     <div class="splash-card">
       <p class="splash-kicker">DSC 106 Final Project</p>
@@ -38,9 +92,9 @@
 
       <p>
         Explore how global vegetation has shifted over time using MODIS NDVI
-        satellite data. This project turns vegetation intensity and long-term change
-        into 3D spikes, helping reveal broad greening trends, regional declines, and
-        uneven patterns of environmental change across the world.
+        satellite data. This project turns vegetation intensity and long-term
+        change into 3D spikes, helping reveal broad greening trends, regional
+        declines, and uneven patterns of environmental change across the world.
       </p>
 
       <div class="splash-details">
@@ -60,7 +114,9 @@
   <header class="top-ui">
     <div class="brand">
       <strong>The Greening Earth</strong>
-      <span>About this Project</span>
+      <button id="about-button" class="about-button">
+        About this Project
+      </button>
     </div>
 
     <nav class="compare-tabs">
@@ -118,12 +174,12 @@
     </div>
 
     <section class="story-panel">
-      <h2 id="story-title">Global Vegetation Change</h2>
+      <h2 id="story-title">Global Vegetation Growth</h2>
       <p id="story-text">
-         Across the world, vegetation has not changed evenly. This map uses MODIS
-          NDVI satellite data to show where plant life appears to have expanded,
-          declined, or remained relatively stable from 2000 to 2025. Green spikes
-          highlight areas of vegetation growth, while orange spikes show decline.
+        Across the world, vegetation has not changed evenly. This map uses MODIS
+        NDVI satellite data to show where plant life appears to have expanded,
+        declined, or remained relatively stable from 2000 to 2025. Green spikes
+        highlight areas of vegetation growth, while orange spikes show decline.
       </p>
     </section>
 
@@ -134,7 +190,11 @@
     <section class="chart-panel">
       <div class="chart-panel-header">
         <h3 id="chart-title">Regional Summary</h3>
-        <button id="chart-close-button" class="chart-close-button" aria-label="Close summary">
+        <button
+          id="chart-close-button"
+          class="chart-close-button"
+          aria-label="Close summary"
+        >
           ×
         </button>
       </div>
