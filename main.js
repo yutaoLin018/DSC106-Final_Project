@@ -5,9 +5,10 @@ mapboxgl.workerCount = 4;
 const views = {
   global: {
     center: [15, 8],
-    zoom: 1.9,
+    zoom: 2.2,
     pitch: 25,
-    bearing: 0
+    bearing: 0,
+    offset: [0, -95]
   },
   amazon: {
     center: [-62, -7],
@@ -66,7 +67,7 @@ const tourSteps = [
   {
     title: "Why this project?",
     text: "Many people might assume human activity has simply caused Earth to lose vegetation everywhere. This project starts from a more complicated question: where is the planet getting greener, where is vegetation declining, and why do these patterns differ by region?",
-    mode: "change",
+    mode: "present",
     view: "global"
   },
   {
@@ -599,7 +600,11 @@ async function setMode(mode) {
 
     activeDetail.present = detail;
 
-    jumpMapTo(singleMap, previousCamera);
+    if (activeView === "global") {
+      jumpMapTo(singleMap, views.global);
+    } else {
+      jumpMapTo(singleMap, previousCamera);
+    }
   }
 
   if (mode === "change") {
@@ -622,7 +627,11 @@ async function setMode(mode) {
 
     activeDetail.change = detail;
 
-    jumpMapTo(singleMap, previousCamera);
+    if (activeView === "global") {
+      jumpMapTo(singleMap, views.global);
+    } else {
+      jumpMapTo(singleMap, previousCamera);
+    }
   }
 
   resizeMaps();
@@ -681,6 +690,7 @@ function mapFlyTo(map, view) {
     zoom: view.zoom,
     pitch: view.pitch,
     bearing: view.bearing,
+    offset: view.offset || [0, 0],
     duration: 3500,
     speed: 0.35,
     curve: 1.6,
@@ -693,7 +703,8 @@ function jumpMapTo(map, view) {
     center: view.center,
     zoom: view.zoom,
     pitch: view.pitch,
-    bearing: view.bearing
+    bearing: view.bearing,
+    offset: view.offset || [0, 0]
   });
 }
 
@@ -1209,7 +1220,12 @@ async function closeGuidedTour() {
   }
 
   await setMode("present");
-  await flyAllTo("global");
+
+  jumpMapTo(singleMap, views.global);
+
+  await loadDetailForCurrentView("global", getCurrentCamera(singleMap));
+
+  resizeMaps();
 }
 
 async function showTourStep(index) {
@@ -1222,6 +1238,8 @@ async function showTourStep(index) {
   const regionSelect = document.querySelector("#region-select");
 
   if (!step || !title || !text || !count || !nextButton) return;
+
+  const previousView = activeView;
 
   title.textContent = step.title;
   text.textContent = step.text;
@@ -1264,7 +1282,7 @@ async function showTourStep(index) {
     closeMobileChart();
   }
 
-  if (step.view) {
+  if (step.view && index !== 0 && step.view !== previousView) {
     await flyAllTo(step.view);
   }
 }

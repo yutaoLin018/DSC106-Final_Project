@@ -460,32 +460,27 @@ body.tour-open .tour-overlay {
   justify-content: center;
   align-items: stretch;
   pointer-events: auto;
-
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
   border-radius: 0 0 1rem 1rem;
   overflow: hidden;
-
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
 }
 
 .compare-tab {
   min-width: clamp(130px, 12vw, 185px);
   border: 0;
   border-right: 1px solid rgba(255, 255, 255, 0.45);
-
   background:
     linear-gradient(
       135deg,
       rgba(255, 255, 255, 0.72),
       rgba(255, 255, 255, 0.36)
     );
-
   color: #111;
   padding: clamp(0.55rem, 0.9vw, 0.85rem) clamp(0.45rem, 1vw, 1rem);
   font: inherit;
   font-size: clamp(0.72rem, 0.95vw, 1rem);
   cursor: pointer;
   line-height: 1.15;
-
   margin: 0;
   transform: none;
 }
@@ -510,7 +505,6 @@ body.tour-open .tour-overlay {
       rgba(255, 255, 255, 0.96),
       rgba(255, 255, 255, 0.68)
     );
-
   font-weight: 700;
   transform: none;
   border-top: 3px solid #2b65d9;
@@ -734,6 +728,13 @@ body.mode-compare .compare-switch {
   pointer-events: auto;
 }
 
+/* Hide story panel in compare mode */
+body.mode-compare .story-panel {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 /* =========================
    Chart panel
    ========================= */
@@ -746,7 +747,31 @@ body.mode-compare .compare-switch {
   width: min(360px, calc(100% - 2rem));
   padding: 1rem;
   border-radius: 1rem;
+  pointer-events: none;
+
+  /* Hidden by default. Only visible in Show Change mode. */
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(0.6rem);
+  transition:
+    opacity 0.25s ease,
+    visibility 0.25s ease,
+    transform 0.25s ease;
+}
+
+/* Show chart only on Show Change page */
+body.mode-change .chart-panel {
+  opacity: 1;
+  visibility: visible;
   pointer-events: auto;
+  transform: translateY(0);
+}
+
+body.mode-present .chart-panel,
+body.mode-compare .chart-panel {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .chart-panel-header {
@@ -902,12 +927,6 @@ body.mode-compare .compare-switch {
 
 .mobile-chart-toggle {
   display: none;
-}
-
-body.mode-compare .chart-panel {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
 }
 
 /* =========================
@@ -1094,7 +1113,7 @@ body.mode-compare .chart-panel {
   }
 
   .mobile-chart-toggle {
-    display: block;
+    display: none;
     position: absolute;
     right: 0.75rem;
     bottom: 9.2rem;
@@ -1115,6 +1134,10 @@ body.mode-compare .chart-panel {
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
   }
 
+  body.mode-change .mobile-chart-toggle {
+    display: block;
+  }
+
   .mobile-chart-toggle:active {
     transform: scale(0.96);
   }
@@ -1129,7 +1152,6 @@ body.mode-compare .chart-panel {
   }
 
   .chart-panel {
-    display: block;
     left: 0.75rem;
     right: 0.75rem;
     bottom: 0.75rem;
@@ -1142,13 +1164,16 @@ body.mode-compare .chart-panel {
     visibility: hidden;
     pointer-events: none;
     transform: translateY(1rem);
-    transition:
-      opacity 0.25s ease,
-      visibility 0.25s ease,
-      transform 0.25s ease;
   }
 
-  body.mobile-chart-open .chart-panel {
+  body.mode-change .chart-panel {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(1rem);
+  }
+
+  body.mode-change.mobile-chart-open .chart-panel {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
@@ -1221,11 +1246,6 @@ body.mode-compare .chart-panel {
   }
 
   #chart-caption {
-    display: none;
-  }
-
-  body.mode-compare .chart-panel,
-  body.mode-compare .mobile-chart-toggle {
     display: none;
   }
 
