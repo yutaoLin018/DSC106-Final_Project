@@ -5,7 +5,7 @@ mapboxgl.workerCount = 4;
 const views = {
   global: {
     center: [15, 8],
-    zoom: 1.5,
+    zoom: 1.9,
     pitch: 25,
     bearing: 0
   },
@@ -30,7 +30,7 @@ const views = {
 };
 
 if (window.innerWidth <= 650) {
-  views.global.zoom = 1.25;
+  views.global.zoom = 1.35;
   views.global.pitch = 15;
 
   views.amazon.zoom = 3.45;
