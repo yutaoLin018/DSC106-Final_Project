@@ -6,6 +6,11 @@
 
   <title>The Greening Earth</title>
 
+  <script>
+    const savedTheme = localStorage.getItem("theme-preference") || "auto";
+    document.documentElement.dataset.theme = savedTheme;
+  </script>
+
   <link
     rel="preload"
     href="data/actual_ndvi_spikes_2025_low.json"
@@ -190,6 +195,15 @@
         <option value="sahel">Sahel / West Africa</option>
         <option value="china">Northern China / Inner Mongolia</option>
       </select>
+
+      <div class="theme-switcher">
+        <label for="theme-select">Theme</label>
+        <select id="theme-select" aria-label="Theme">
+          <option value="auto">Auto</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </div>
     </div>
   </header>
 

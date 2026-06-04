@@ -1,4 +1,5 @@
-mapboxgl.accessToken = "pk.eyJ1IjoieXV0YW9saW4iLCJhIjoiY21wNWI0MDl5MDlldTJwcTI3bmtkY3h3NiJ9.7aMzhLHSwm6BOedHTptjNA";
+mapboxgl.accessToken =
+  "pk.eyJ1IjoieXV0YW9saW4iLCJhIjoiY21wNWI0MDl5MDlldTJwcTI3bmtkY3h3NiJ9.7aMzhLHSwm6BOedHTptjNA";
 
 mapboxgl.workerCount = 4;
 
@@ -212,42 +213,12 @@ async function initAllMaps() {
   setupMapLayer(leftMap, emptyGeoJSON, "compare");
   setupMapLayer(rightMap, emptyGeoJSON, "compare");
 
-  singleMap.addSource("change-spikes", {
-    type: "geojson",
-    data: emptyGeoJSON
-  });
-
-  singleMap.addLayer({
-    id: "change-spikes-layer",
-    type: "fill-extrusion",
-    source: "change-spikes",
-    layout: {
-      visibility: "none"
-    },
-    paint: {
-      "fill-extrusion-color": [
-        "case",
-        [">", ["get", "change"], 0],
-        "#2ca25f",
-        "#e76f51"
-      ],
-      "fill-extrusion-height": [
-        "min",
-        ["*", ["abs", ["get", "change"]], 320000],
-        65000
-      ],
-      "fill-extrusion-base": 0,
-      "fill-extrusion-opacity": 0.72,
-      "fill-extrusion-vertical-gradient": false,
-      "fill-extrusion-emissive-strength": 1,
-      "fill-extrusion-ambient-occlusion-intensity": 0,
-      "fill-extrusion-ambient-occlusion-radius": 0
-    }
-  });
+  addChangeLayerToSingleMap(emptyGeoJSON);
 
   setupTopTabs();
   setupCompareYearSwitch();
   setupRegionJump();
+  setupThemeSwitcher();
   setupMobileChartToggle();
   setupAboutModal();
   setupGuidedTour();
@@ -275,6 +246,24 @@ async function initAllMaps() {
   appReady = true;
   updateSplashStatus("Map ready. Click Start to explore.");
   enableStartButton();
+}
+
+function setupThemeSwitcher() {
+  const themeSelect = document.querySelector("#theme-select");
+
+  if (!themeSelect) return;
+
+  const savedTheme = localStorage.getItem("theme-preference") || "auto";
+
+  document.documentElement.dataset.theme = savedTheme;
+  themeSelect.value = savedTheme;
+
+  themeSelect.addEventListener("change", () => {
+    const selectedTheme = themeSelect.value;
+
+    localStorage.setItem("theme-preference", selectedTheme);
+    document.documentElement.dataset.theme = selectedTheme;
+  });
 }
 
 function removeMapLighting(map) {
@@ -316,6 +305,23 @@ function setupMapLayer(map, data, mode) {
   });
 }
 
+function addChangeLayerToSingleMap(data) {
+  singleMap.addSource("change-spikes", {
+    type: "geojson",
+    data
+  });
+
+  singleMap.addLayer({
+    id: "change-spikes-layer",
+    type: "fill-extrusion",
+    source: "change-spikes",
+    layout: {
+      visibility: "none"
+    },
+    paint: getChangePaint()
+  });
+}
+
 function getSpikePaint(mode) {
   return {
     "fill-extrusion-color": [
@@ -334,6 +340,28 @@ function getSpikePaint(mode) {
     "fill-extrusion-height": ["get", "height"],
     "fill-extrusion-base": 0,
     "fill-extrusion-opacity": mode === "compare" ? 0.65 : 0.92,
+    "fill-extrusion-vertical-gradient": false,
+    "fill-extrusion-emissive-strength": 1,
+    "fill-extrusion-ambient-occlusion-intensity": 0,
+    "fill-extrusion-ambient-occlusion-radius": 0
+  };
+}
+
+function getChangePaint() {
+  return {
+    "fill-extrusion-color": [
+      "case",
+      [">", ["get", "change"], 0],
+      "#2ca25f",
+      "#e76f51"
+    ],
+    "fill-extrusion-height": [
+      "min",
+      ["*", ["abs", ["get", "change"]], 320000],
+      65000
+    ],
+    "fill-extrusion-base": 0,
+    "fill-extrusion-opacity": 0.72,
     "fill-extrusion-vertical-gradient": false,
     "fill-extrusion-emissive-strength": 1,
     "fill-extrusion-ambient-occlusion-intensity": 0,
@@ -762,6 +790,9 @@ function syncCompareMaps() {
 }
 
 function setupPopup(map) {
+  if (map.__popupReady) return;
+  map.__popupReady = true;
+
   const popup = new mapboxgl.Popup({
     closeButton: false,
     closeOnClick: false
@@ -999,35 +1030,39 @@ function renderRegionCharts(viewName, stats) {
   const areaChart = document.querySelector("#area-summary-chart");
   const caption = document.querySelector("#chart-caption");
 
-  if (!chartTitle || !ndviChart || !changeChart || !areaChart || !caption) return;
+  if (!chartTitle || !ndviChart || !changeChart || !areaChart || !caption) {
+    return;
+  }
 
   const title = storyText[viewName]?.title || "Global Overview";
   chartTitle.textContent = `${title} Summary`;
 
   const years = ["2000", "2013", "2025"];
 
-  ndviChart.innerHTML = years.map(year => {
-    const value = stats.ndvi[year];
-    const safeValue = value === null ? 0 : value;
+  ndviChart.innerHTML = years
+    .map(year => {
+      const value = stats.ndvi[year];
+      const safeValue = value === null ? 0 : value;
 
-    const targetWidth = Math.max(3, Math.min(100, safeValue * 100));
-    const startWidth = previousNdviBarWidths[year] ?? 0;
+      const targetWidth = Math.max(3, Math.min(100, safeValue * 100));
+      const startWidth = previousNdviBarWidths[year] ?? 0;
 
-    return `
-      <div class="bar-row">
-        <span>${year}</span>
-        <div class="bar-track">
-          <div
-            class="bar-fill"
-            data-year="${year}"
-            data-target-width="${targetWidth}"
-            style="width: ${startWidth}%;"
-          ></div>
+      return `
+        <div class="bar-row">
+          <span>${year}</span>
+          <div class="bar-track">
+            <div
+              class="bar-fill"
+              data-year="${year}"
+              data-target-width="${targetWidth}"
+              style="width: ${startWidth}%;"
+            ></div>
+          </div>
+          <span>${value === null ? "N/A" : value.toFixed(3)}</span>
         </div>
-        <span>${value === null ? "N/A" : value.toFixed(3)}</span>
-      </div>
-    `;
-  }).join("");
+      `;
+    })
+    .join("");
 
   requestAnimationFrame(() => {
     const bars = ndviChart.querySelectorAll(".bar-fill");
@@ -1164,7 +1199,9 @@ function setupGuidedTour() {
   const nextButton = document.querySelector("#tour-next-button");
   const skipButton = document.querySelector("#tour-skip-button");
 
-  if (!overlay || !title || !text || !count || !nextButton || !skipButton) return;
+  if (!overlay || !title || !text || !count || !nextButton || !skipButton) {
+    return;
+  }
 
   nextButton.addEventListener("click", async () => {
     if (currentTourStep >= tourSteps.length - 1) {
