@@ -1,7 +1,5 @@
 mapboxgl.accessToken = "pk.eyJ1IjoieXV0YW9saW4iLCJhIjoiY21wNWI0MDl5MDlldTJwcTI3bmtkY3h3NiJ9.7aMzhLHSwm6BOedHTptjNA";
 
-// More workers for parsing large JSON / GeoJSON files.
-// Set this before creating any maps.
 mapboxgl.workerCount = 4;
 
 const views = {
@@ -31,7 +29,6 @@ const views = {
   }
 };
 
-// Easier camera on mobile.
 if (window.innerWidth <= 650) {
   views.global.zoom = 1.25;
   views.global.pitch = 15;
@@ -64,6 +61,40 @@ const storyText = {
     text: "Northern China and Inner Mongolia show one of the clearest greening signals in this project. In the chart, average NDVI rises from about 0.296 in 2000 to 0.409 in 2025, and nearly all changed cells are classified as vegetation growth. This pattern matches research showing strong greening across parts of northern China, especially in regions affected by ecological restoration programs such as the Three-North Shelter Forest Program and Grain for Green. These projects were designed to reduce desertification, soil erosion, and dust-storm impacts by restoring vegetation in dryland and grassland areas. However, the map should not be read as a simple success story everywhere: small orange patches remain, and researchers note that climate variability, grazing pressure, water limits, and local land-use changes can still produce uneven outcomes across Inner Mongolia’s fragile drylands."
   }
 };
+
+const tourSteps = [
+  {
+    title: "Why this project?",
+    text: "Many people might assume human activity has simply caused Earth to lose vegetation everywhere. This project starts from a more complicated question: where is the planet getting greener, where is vegetation declining, and why do these patterns differ by region?",
+    mode: "change",
+    view: "global"
+  },
+  {
+    title: "Start with the global pattern",
+    text: "The change view uses green spikes for vegetation growth and orange spikes for vegetation decline between 2000 and 2025. Instead of one simple global trend, the map shows a patchwork of growth and loss.",
+    mode: "change",
+    view: "global"
+  },
+  {
+    title: "Zoom into regional stories",
+    text: "Use the region menu to jump into places where the global pattern becomes easier to interpret. The Amazon, Sahel / West Africa, and Northern China / Inner Mongolia each tell a different vegetation-change story.",
+    mode: "change",
+    view: "amazon"
+  },
+  {
+    title: "Use the chart for context",
+    text: "The summary chart helps explain the selected region. It shows average NDVI for 2000, 2013, and 2025, plus the share of changed cells showing growth or decline.",
+    mode: "change",
+    view: "sahel",
+    openChart: true
+  },
+  {
+    title: "Compare years directly",
+    text: "The Compare tab lets readers place earlier vegetation layers beside 2025. This helps separate long-term change from the latest vegetation pattern.",
+    mode: "compare",
+    view: "global"
+  }
+];
 
 const regionBounds = {
   global: [-180, 180, -60, 85],
@@ -112,6 +143,7 @@ const emptyGeoJSON = {
 let currentMode = "present";
 let activeView = "global";
 let compareBaseYear = "2000";
+let currentTourStep = 0;
 
 let cachedData = {};
 let cachedChangeData = {};
@@ -133,8 +165,6 @@ const mapOptions = {
   bearing: views.global.bearing,
   antialias: false,
   projection: "mercator",
-
-  // Keep seamless horizontal panning.
   renderWorldCopies: true
 };
 
@@ -219,6 +249,7 @@ async function initAllMaps() {
   setupRegionJump();
   setupMobileChartToggle();
   setupAboutModal();
+  setupGuidedTour();
   setupPopup(singleMap);
   setupPopup(leftMap);
   setupPopup(rightMap);
@@ -1049,6 +1080,106 @@ function setupAboutModal() {
   });
 }
 
+function setupGuidedTour() {
+  const overlay = document.querySelector("#tour-overlay");
+  const title = document.querySelector("#tour-title");
+  const text = document.querySelector("#tour-text");
+  const count = document.querySelector("#tour-step-count");
+  const nextButton = document.querySelector("#tour-next-button");
+  const skipButton = document.querySelector("#tour-skip-button");
+
+  if (!overlay || !title || !text || !count || !nextButton || !skipButton) return;
+
+  nextButton.addEventListener("click", async () => {
+    if (currentTourStep >= tourSteps.length - 1) {
+      closeGuidedTour();
+      return;
+    }
+
+    currentTourStep += 1;
+    await showTourStep(currentTourStep);
+  });
+
+  skipButton.addEventListener("click", () => {
+    closeGuidedTour();
+  });
+}
+
+async function openGuidedTour() {
+  currentTourStep = 0;
+  document.body.classList.add("tour-open");
+  document.querySelector("#tour-overlay")?.setAttribute("aria-hidden", "false");
+  await showTourStep(currentTourStep);
+}
+
+function closeGuidedTour() {
+  document.body.classList.remove("tour-open", "mobile-chart-open");
+  document.querySelector("#tour-overlay")?.setAttribute("aria-hidden", "true");
+
+  const button = document.querySelector("#mobile-chart-toggle");
+
+  if (button) {
+    button.textContent = "Summary";
+  }
+}
+
+async function showTourStep(index) {
+  const step = tourSteps[index];
+
+  const title = document.querySelector("#tour-title");
+  const text = document.querySelector("#tour-text");
+  const count = document.querySelector("#tour-step-count");
+  const nextButton = document.querySelector("#tour-next-button");
+  const regionSelect = document.querySelector("#region-select");
+
+  if (!step || !title || !text || !count || !nextButton) return;
+
+  title.textContent = step.title;
+  text.textContent = step.text;
+  count.textContent = `Step ${index + 1} of ${tourSteps.length}`;
+  nextButton.textContent = index === tourSteps.length - 1 ? "Finish" : "Next";
+
+  if (step.view) {
+    activeView = step.view;
+    updateStoryPanel(step.view);
+    await updateRegionCharts(step.view);
+
+    if (regionSelect) {
+      regionSelect.value = step.view;
+    }
+  }
+
+  if (step.mode && currentMode !== step.mode) {
+    const tab = document.querySelector(`.compare-tab[data-mode="${step.mode}"]`);
+
+    document.querySelectorAll(".compare-tab").forEach(t => {
+      t.classList.remove("selected");
+    });
+
+    if (tab) {
+      tab.classList.add("selected");
+    }
+
+    await setMode(step.mode);
+  }
+
+  if (step.openChart) {
+    document.body.classList.add("mobile-chart-open");
+
+    const button = document.querySelector("#mobile-chart-toggle");
+
+    if (button) {
+      button.textContent = "Hide Summary";
+    }
+  } else {
+    closeMobileChart();
+  }
+
+  if (step.view) {
+    await flyAllTo(step.view);
+  }
+}
+
 function updateSplashStatus(message) {
   const status = document.querySelector("#loading-status");
 
@@ -1083,12 +1214,11 @@ function setupSplashScreen() {
     setTimeout(() => {
       splash.remove();
       resizeMaps();
+      openGuidedTour();
     }, 600);
   });
 }
 
-// Register service worker for local data caching.
-// Put sw.js in the same folder as index.html.
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker

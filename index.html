@@ -6,7 +6,6 @@
 
   <title>The Greening Earth</title>
 
-  <!-- Preload only the startup / likely next files -->
   <link
     rel="preload"
     href="data/actual_ndvi_spikes_2025_low.json"
@@ -50,6 +49,14 @@
         and then zoom into selected regions.
       </p>
 
+      <h3>Why this project?</h3>
+      <p>
+        Many people may assume that human activity has simply caused Earth to
+        lose vegetation everywhere. Our project shows that the story is more
+        complex: some regions are greening, some are declining, and the causes
+        vary by place.
+      </p>
+
       <h3>What the map shows</h3>
       <p>
         Green spikes represent areas where vegetation increased, while orange
@@ -67,8 +74,9 @@
 
       <h3>Team</h3>
       <p>
+        Add your team members here:
         <br />
-        Yutao Lin, Kang Lee, Jacob Kavanal, Raffi Dulgerian
+        Yutao Lin, Team Member 2, Team Member 3
       </p>
 
       <h3>Links</h3>
@@ -108,6 +116,30 @@
       <p id="loading-status" class="loading-status">
         Preparing map data...
       </p>
+    </div>
+  </section>
+
+  <section id="tour-overlay" class="tour-overlay" aria-hidden="true">
+    <div class="tour-card">
+      <p id="tour-step-count" class="tour-step-count">Step 1 of 5</p>
+
+      <h2 id="tour-title">Why this project?</h2>
+
+      <p id="tour-text">
+        Many people might assume human activity has simply caused Earth to lose
+        vegetation everywhere. This project starts from a more complicated
+        question: where is the planet getting greener, where is vegetation
+        declining, and why do these patterns differ by region?
+      </p>
+
+      <div class="tour-actions">
+        <button id="tour-skip-button" class="tour-secondary-button">
+          Skip tour
+        </button>
+        <button id="tour-next-button" class="tour-primary-button">
+          Next
+        </button>
+      </div>
     </div>
   </section>
 
