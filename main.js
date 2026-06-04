@@ -860,6 +860,45 @@ function pointInBounds(lon, lat, bounds) {
   return lon >= lonMin && lon <= lonMax && lat >= latMin && lat <= latMax;
 }
 
+function polygonAreaKm2(coords) {
+  const earthRadiusKm = 6371;
+  let area = 0;
+
+  if (!coords || coords.length < 4) return 0;
+
+  for (let i = 0; i < coords.length - 1; i++) {
+    const lon1 = coords[i][0] * Math.PI / 180;
+    const lat1 = coords[i][1] * Math.PI / 180;
+    const lon2 = coords[i + 1][0] * Math.PI / 180;
+    const lat2 = coords[i + 1][1] * Math.PI / 180;
+
+    area += (lon2 - lon1) * (2 + Math.sin(lat1) + Math.sin(lat2));
+  }
+
+  return Math.abs(area * earthRadiusKm * earthRadiusKm / 2);
+}
+
+function featureAreaKm2(feature) {
+  if (!feature.geometry || feature.geometry.type !== "Polygon") return 0;
+
+  const outerRing = feature.geometry.coordinates[0];
+  return polygonAreaKm2(outerRing);
+}
+
+function formatArea(value) {
+  if (!Number.isFinite(value)) return "N/A";
+
+  if (value >= 1000000) {
+    return `${(value / 1000000).toFixed(2)}M km²`;
+  }
+
+  if (value >= 1000) {
+    return `${Math.round(value).toLocaleString()} km²`;
+  }
+
+  return `${value.toFixed(1)} km²`;
+}
+
 function mean(values) {
   if (!values.length) return null;
   return values.reduce((sum, value) => sum + value, 0) / values.length;
@@ -900,15 +939,26 @@ async function computeRegionChartStats(viewName) {
   let growthCount = 0;
   let declineCount = 0;
 
+  let addedAreaKm2 = 0;
+  let lostAreaKm2 = 0;
+
   changeData.features.forEach(feature => {
     const center = featureCenter(feature);
 
     if (!pointInBounds(center.lon, center.lat, bounds)) return;
 
     const change = Number(feature.properties.change);
+    const areaKm2 = featureAreaKm2(feature);
 
-    if (change > 0) growthCount += 1;
-    if (change < 0) declineCount += 1;
+    if (change > 0) {
+      growthCount += 1;
+      addedAreaKm2 += areaKm2;
+    }
+
+    if (change < 0) {
+      declineCount += 1;
+      lostAreaKm2 += areaKm2;
+    }
   });
 
   const totalChange = growthCount + declineCount;
@@ -921,7 +971,9 @@ async function computeRegionChartStats(viewName) {
     },
     change: {
       growthPct: totalChange ? growthCount / totalChange : 0,
-      declinePct: totalChange ? declineCount / totalChange : 0
+      declinePct: totalChange ? declineCount / totalChange : 0,
+      addedAreaKm2,
+      lostAreaKm2
     }
   };
 
@@ -933,9 +985,10 @@ function renderRegionCharts(viewName, stats) {
   const chartTitle = document.querySelector("#chart-title");
   const ndviChart = document.querySelector("#ndvi-bar-chart");
   const changeChart = document.querySelector("#change-summary-chart");
+  const areaChart = document.querySelector("#area-summary-chart");
   const caption = document.querySelector("#chart-caption");
 
-  if (!chartTitle || !ndviChart || !changeChart || !caption) return;
+  if (!chartTitle || !ndviChart || !changeChart || !areaChart || !caption) return;
 
   const title = storyText[viewName]?.title || "Global Overview";
   chartTitle.textContent = `${title} Summary`;
@@ -991,8 +1044,20 @@ function renderRegionCharts(viewName, stats) {
     </div>
   `;
 
+  areaChart.innerHTML = `
+    <div class="area-box added">
+      <strong>${formatArea(stats.change.addedAreaKm2)}</strong>
+      <span>estimated added green-space area</span>
+    </div>
+
+    <div class="area-box lost">
+      <strong>${formatArea(stats.change.lostAreaKm2)}</strong>
+      <span>estimated lost green-space area</span>
+    </div>
+  `;
+
   caption.textContent =
-    "Chart values are calculated from the medium-detail MODIS NDVI spike data for the selected map region.";
+    "Area values are approximate and are calculated from changed MODIS NDVI grid cells in the selected region.";
 }
 
 async function updateRegionCharts(viewName) {

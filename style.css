@@ -708,6 +708,40 @@ body.mode-compare .compare-switch {
   color: var(--muted);
 }
 
+.area-chart {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.area-box {
+  padding: 0.65rem;
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid var(--border);
+}
+
+.area-box strong {
+  display: block;
+  font-size: 0.95rem;
+  line-height: 1.15;
+}
+
+.area-box span {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+.area-box.added strong {
+  color: var(--growth);
+}
+
+.area-box.lost strong {
+  color: var(--decline);
+}
+
 .change-chart {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1137,6 +1171,23 @@ body.mode-compare .chart-panel {
   .start-button {
     width: 100%;
     padding: 0.8rem 1rem;
+  }
+
+  .area-chart {
+    gap: 0.35rem;
+  }
+
+  .area-box {
+    padding: 0.45rem 0.5rem;
+    border-radius: 0.6rem;
+  }
+
+  .area-box strong {
+    font-size: 0.78rem;
+  }
+
+  .area-box span {
+    font-size: 0.58rem;
   }
 }
 
