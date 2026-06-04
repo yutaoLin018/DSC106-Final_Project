@@ -1189,10 +1189,11 @@ body.mode-compare .story-panel {
   pointer-events: none;
 }
 
+/* Keep story text position the same in light and dark mode */
 :root[data-theme="dark"] .story-panel {
-  left: 3vw;
-  bottom: 4vh;
-  width: min(520px, calc(100% - 2rem));
+  left: 5vw;
+  bottom: 8.5rem;
+  width: min(420px, calc(100% - 2rem));
 }
 
 :root[data-theme="dark"] .story-panel h2 {
@@ -1201,16 +1202,16 @@ body.mode-compare .story-panel {
 }
 
 :root[data-theme="dark"] .story-panel p {
-  border-radius: 28px;
-  padding: 1.2rem 1.35rem;
+  border-radius: 1rem;
+  padding: 1rem 1.1rem;
   color: rgba(238, 244, 240, 0.88);
 }
 
 @media (prefers-color-scheme: dark) {
   :root[data-theme="auto"] .story-panel {
-    left: 3vw;
-    bottom: 4vh;
-    width: min(520px, calc(100% - 2rem));
+    left: 5vw;
+    bottom: 8.5rem;
+    width: min(420px, calc(100% - 2rem));
   }
 
   :root[data-theme="auto"] .story-panel h2 {
@@ -1219,8 +1220,8 @@ body.mode-compare .story-panel {
   }
 
   :root[data-theme="auto"] .story-panel p {
-    border-radius: 28px;
-    padding: 1.2rem 1.35rem;
+    border-radius: 1rem;
+    padding: 1rem 1.1rem;
     color: rgba(238, 244, 240, 0.88);
   }
 }
