@@ -1092,7 +1092,7 @@ function setupGuidedTour() {
 
   nextButton.addEventListener("click", async () => {
     if (currentTourStep >= tourSteps.length - 1) {
-      closeGuidedTour();
+      await closeGuidedTour();
       return;
     }
 
@@ -1100,8 +1100,8 @@ function setupGuidedTour() {
     await showTourStep(currentTourStep);
   });
 
-  skipButton.addEventListener("click", () => {
-    closeGuidedTour();
+  skipButton.addEventListener("click", async () => {
+    await closeGuidedTour();
   });
 }
 
@@ -1112,7 +1112,7 @@ async function openGuidedTour() {
   await showTourStep(currentTourStep);
 }
 
-function closeGuidedTour() {
+async function closeGuidedTour() {
   document.body.classList.remove("tour-open", "mobile-chart-open");
   document.querySelector("#tour-overlay")?.setAttribute("aria-hidden", "true");
 
@@ -1121,6 +1121,30 @@ function closeGuidedTour() {
   if (button) {
     button.textContent = "Summary";
   }
+
+  activeView = "global";
+
+  const regionSelect = document.querySelector("#region-select");
+
+  if (regionSelect) {
+    regionSelect.value = "global";
+  }
+
+  updateStoryPanel("global");
+  await updateRegionCharts("global");
+
+  document.querySelectorAll(".compare-tab").forEach(tab => {
+    tab.classList.remove("selected");
+  });
+
+  const presentTab = document.querySelector('.compare-tab[data-mode="present"]');
+
+  if (presentTab) {
+    presentTab.classList.add("selected");
+  }
+
+  await setMode("present");
+  await flyAllTo("global");
 }
 
 async function showTourStep(index) {

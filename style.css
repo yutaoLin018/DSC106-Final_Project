@@ -245,10 +245,10 @@ body.about-open .about-modal {
   inset: 0;
   z-index: 160;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  background: rgba(0, 0, 0, 0.28);
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 6.5rem 2rem 2rem;
+  background: rgba(0, 0, 0, 0.14);
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -262,8 +262,9 @@ body.tour-open .tour-overlay {
 }
 
 .tour-card {
-  width: min(560px, 100%);
-  padding: 1.6rem;
+  width: min(440px, 100%);
+  padding: 1.35rem;
+  margin-right: 19vw;
   background: rgba(255, 255, 255, 0.96);
   border: 1px solid var(--border);
   border-radius: 1.25rem;
@@ -1075,8 +1076,7 @@ body.mode-compare .chart-panel {
     padding: 1rem;
   }
 
-  .about-card,
-  .tour-card {
+  .about-card {
     padding: 1.35rem;
     border-radius: 1rem;
   }
@@ -1087,6 +1087,15 @@ body.mode-compare .chart-panel {
 
   .tour-overlay {
     align-items: flex-end;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  .tour-card {
+    width: 100%;
+    margin-right: 0;
+    padding: 1.25rem;
+    border-radius: 1rem;
   }
 
   .tour-card h2 {
