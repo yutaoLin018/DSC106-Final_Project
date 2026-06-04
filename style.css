@@ -460,27 +460,34 @@ body.tour-open .tour-overlay {
   justify-content: center;
   align-items: stretch;
   pointer-events: auto;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
-  border-radius: 0 0 0.9rem 0.9rem;
+
+  border-radius: 0 0 1rem 1rem;
   overflow: hidden;
+
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
 }
 
 .compare-tab {
   min-width: clamp(130px, 12vw, 185px);
   border: 0;
   border-right: 1px solid rgba(255, 255, 255, 0.45);
+
   background:
     linear-gradient(
       135deg,
       rgba(255, 255, 255, 0.72),
       rgba(255, 255, 255, 0.36)
     );
+
   color: #111;
   padding: clamp(0.55rem, 0.9vw, 0.85rem) clamp(0.45rem, 1vw, 1rem);
   font: inherit;
   font-size: clamp(0.72rem, 0.95vw, 1rem);
   cursor: pointer;
   line-height: 1.15;
+
+  margin: 0;
+  transform: none;
 }
 
 .compare-tab:last-child {
@@ -503,8 +510,9 @@ body.tour-open .tour-overlay {
       rgba(255, 255, 255, 0.96),
       rgba(255, 255, 255, 0.68)
     );
+
   font-weight: 700;
-  transform: translateY(4px);
+  transform: none;
   border-top: 3px solid #2b65d9;
 }
 
