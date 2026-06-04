@@ -105,10 +105,21 @@
         declines, and uneven patterns of environmental change across the world.
       </p>
 
-      <div class="splash-details">
-        <span>Green = vegetation growth</span>
-        <span>Orange = vegetation decline</span>
-        <span>Taller spikes = stronger signal</span>
+      <div class="splash-legend">
+        <div class="legend-chip legend-chip--growth">
+          <span class="legend-dot legend-dot--growth"></span>
+          <span>Green = vegetation growth</span>
+        </div>
+
+        <div class="legend-chip legend-chip--decline">
+          <span class="legend-dot legend-dot--decline"></span>
+          <span>Orange = vegetation decline</span>
+        </div>
+
+        <div class="legend-chip legend-chip--height">
+          <span class="legend-dot legend-dot--height"></span>
+          <span>Taller spikes = stronger signal</span>
+        </div>
       </div>
 
       <button id="start-button" class="start-button">Loading Map...</button>
@@ -214,6 +225,28 @@
         highlight areas of vegetation growth, while orange spikes show decline.
       </p>
     </section>
+
+    <div class="map-legend">
+      <div class="map-legend-row legend-present-only">
+        <span class="map-legend-gradient"></span>
+        <span>Higher NDVI / stronger vegetation</span>
+      </div>
+
+      <div class="map-legend-row legend-change-only">
+        <span class="map-legend-swatch map-legend-growth"></span>
+        <span>Vegetation growth</span>
+      </div>
+
+      <div class="map-legend-row legend-change-only">
+        <span class="map-legend-swatch map-legend-decline"></span>
+        <span>Vegetation decline</span>
+      </div>
+
+      <div class="map-legend-row">
+        <span class="map-legend-height-icon"></span>
+        <span>Taller spikes = stronger signal</span>
+      </div>
+    </div>
 
     <button id="mobile-chart-toggle" class="mobile-chart-toggle">
       Summary
