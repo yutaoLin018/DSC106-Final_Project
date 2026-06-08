@@ -41,7 +41,6 @@ const views = {
   }
 };
 
-/* Mobile camera adjustments */
 if (window.innerWidth <= 650) {
   views.global.zoom = 1.15;
   views.global.pitch = 0;
@@ -62,27 +61,27 @@ if (window.innerWidth <= 650) {
 
 const storyText = {
   global: {
-    title: "Global Vegetation Growth",
+    title: "A Greener Global Picture",
     text:
-      "Across the world, vegetation has not changed evenly. This map uses MODIS NDVI satellite data to show where plant life appears to have expanded, declined, or remained relatively stable from 2000 to 2025. Green spikes highlight areas of vegetation growth, while orange spikes show decline. The global view gives readers a broad overview before they zoom into specific regions to explore local patterns."
+      "Many parts of the world appear greener in 2025 than they did in 2000. This encouraging pattern suggests that vegetation can recover through natural processes, rainfall changes, improved land management, and environmental restoration. However, progress is uneven, so regional details remain important. Explore the globe to see where greening is occurring and what these changes may teach us about building a more sustainable future."
   },
 
   amazon: {
     title: "Amazon Basin",
     text:
-      "The Amazon Basin remains one of the greenest regions in the dataset, with average NDVI staying high across 2000, 2013, and 2025. However, the chart also shows that not all areas moved in the same direction: about 35% of changed cells show vegetation decline. These orange patches may reflect land-use pressure along deforestation frontiers, where forest has been cleared for cattle ranching, farming, roads, and settlement. The map therefore shows both the Amazon’s continued high vegetation density and uneven signs of forest loss."
+      "The Amazon remains one of the most vegetation-dense regions in the world, and much of the basin continues to show high NDVI. Areas of growth demonstrate the forest’s resilience and capacity for recovery. However, concentrated orange areas also reveal vegetation decline near deforestation frontiers affected by roads, ranching, farming, and settlement. Therefore, protecting existing forest while restoring cleared land remains essential to preserving the Amazon’s ecological value."
   },
 
   sahel: {
     title: "Sahel / West Africa",
     text:
-      "The Sahel is a transition zone between the Sahara Desert and the wetter landscapes of West Africa, so small changes in rainfall, land use, and drought can strongly affect vegetation. In this map, average NDVI rises from about 0.391 in 2000 to 0.405 in 2025, and the chart shows more growth cells than decline cells. However, the orange areas show that this recovery is uneven: dryland degradation, grazing pressure, farming expansion, and recurring drought still affect many places."
+      "The Sahel offers an encouraging example of vegetation recovery. Average NDVI rises from about 0.391 in 2000 to 0.405 in 2025, and the chart shows more growth cells than decline cells. Increased rainfall, local land management, and restoration efforts may all contribute to this greening. However, drought, grazing pressure, farming expansion, and land degradation continue to affect some areas. Therefore, the Sahel represents both meaningful progress and an opportunity for continued restoration."
   },
 
   china: {
     title: "Northern China / Inner Mongolia",
     text:
-      "Northern China and Inner Mongolia show one of the clearest greening signals in this project. Average NDVI rises from about 0.296 in 2000 to 0.409 in 2025, and nearly all changed cells are classified as vegetation growth. This pattern is consistent with large ecological restoration and anti-desertification programs. However, smaller orange patches remain, showing that climate variability, grazing pressure, water limits, and local land-use change still produce uneven outcomes."
+      "Northern China and Inner Mongolia show one of the strongest greening signals in the project. Average NDVI rises from about 0.296 in 2000 to 0.409 in 2025, and nearly all changed cells show vegetation growth. Large restoration and anti-desertification programs may have contributed to this improvement. However, water limitations, grazing pressure, and climate variability still create local challenges. Therefore, the region shows how coordinated environmental action can produce visible progress while requiring careful long-term management."
   }
 };
 
@@ -92,42 +91,42 @@ const storyText = {
 
 const tourSteps = [
   {
-    title: "Why this project?",
+    title: "A planet under pressure",
     text:
-      "Many people might assume human activity has simply caused Earth to lose vegetation everywhere. This project starts from a more complicated question: where is the planet getting greener, where is vegetation declining, and why do these patterns differ by region?",
+      "Human activity has transformed forests, grasslands, farms, and drylands around the world. Many people may expect these pressures to have caused vegetation to decline almost everywhere.",
     mode: "present",
     view: "global"
   },
 
   {
-    title: "Start with the global pattern",
+    title: "A hopeful surprise",
     text:
-      "The change view uses green spikes for vegetation growth and orange spikes for vegetation decline between 2000 and 2025. Instead of one simple global trend, the globe shows a patchwork of growth and loss.",
+      "MODIS satellite data reveals a more encouraging global pattern. Many parts of the world appear greener in 2025 than they did in 2000, showing that vegetation can recover, expand, or respond positively to changing conditions.",
     mode: "change",
     view: "global"
   },
 
   {
-    title: "Zoom into regional stories",
+    title: "Progress takes different forms",
     text:
-      "Use the region menu to jump into places where the global pattern becomes easier to interpret. The Amazon, Sahel / West Africa, and Northern China / Inner Mongolia each tell a different vegetation-change story.",
+      "Vegetation growth can result from forest recovery, increased rainfall, improved farming, better land management, or large restoration programs. But the pattern is not identical everywhere, so the meaning of greening depends on the region.",
     mode: "change",
     view: "amazon"
   },
 
   {
-    title: "Use the chart for context",
+    title: "Regional stories of recovery",
     text:
-      "The summary chart helps explain the selected region. It shows average NDVI for 2000, 2013, and 2025, plus the share of changed cells showing growth or decline.",
+      "The Sahel shows signs of recovery after severe historical droughts. Northern China shows strong greening near major restoration projects. Even in the Amazon, areas of growth exist alongside places that still need protection.",
     mode: "change",
     view: "sahel",
     openChart: true
   },
 
   {
-    title: "Compare years directly",
+    title: "A greener future is possible",
     text:
-      "The Compare tab lets readers place earlier vegetation layers beside 2025. This helps separate long-term change from the latest vegetation pattern.",
+      "The global trend offers reasons for optimism, while regional differences show where continued restoration and protection are needed. Environmental improvement is possible, and human choices can help shape a greener future.",
     mode: "compare",
     view: "global"
   }
@@ -275,10 +274,6 @@ Promise.all(maps.map(waitForMapLoad))
 function setupGlobe(map) {
   map.setProjection("globe");
 
-  /*
-   * Remove the default atmospheric glow.
-   * The surrounding page/background remains visible around the globe.
-   */
   if (map.setFog) {
     map.setFog(null);
   }
@@ -292,10 +287,6 @@ function setupGlobe(map) {
   }
 }
 
-/*
- * Recolors the Mapbox water layers without changing the map style.
- * This avoids rebuilding or removing the custom NDVI layers.
- */
 function setDarkOcean(map) {
   const style = map.getStyle();
 
@@ -388,10 +379,6 @@ async function initAllMaps() {
   setupGlobe(leftMap);
   setupGlobe(rightMap);
 
-  /*
-   * Apply the ocean color now and again after each map reaches idle.
-   * The second pass catches any style layers that were not fully ready.
-   */
   setDarkOcean(singleMap);
   setDarkOcean(leftMap);
   setDarkOcean(rightMap);
@@ -456,7 +443,6 @@ async function initAllMaps() {
 
 /* =========================================================
    Theme selector
-   CSS-only dark mode
    ========================================================= */
 
 function setupThemeSwitcher() {

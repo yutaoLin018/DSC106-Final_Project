@@ -23,10 +23,6 @@
   <link rel="stylesheet" href="style.css">
 
   <script>
-    /*
-     * Apply the saved theme before the page renders.
-     * This prevents a light-mode flash when the saved theme is dark.
-     */
     (() => {
       const savedTheme =
         localStorage.getItem("theme-preference") || "auto";
@@ -56,29 +52,31 @@
       </h1>
 
       <p>
-        This project uses satellite-based NDVI data to explore where
-        vegetation is greener, where it has declined, and how those
-        patterns differ around the world.
+        Human activity has placed pressure on ecosystems around the world,
+        and many people may expect the planet to be steadily losing
+        vegetation. Surprisingly, MODIS satellite data shows that large
+        areas became greener between 2000 and 2025. But this progress is
+        uneven, and some regions still face deforestation, drought, and
+        land degradation. Explore the globe to see where vegetation is
+        recovering and where continued protection is still needed.
       </p>
 
       <div class="splash-explanation">
         <div class="splash-explanation-item">
-          <strong>Vegetation maps</strong>
+          <strong>A hopeful global pattern</strong>
 
           <span>
-            Color and spike height show vegetation intensity.
-            Higher NDVI generally means greener, denser, or healthier
-            vegetation.
+            Many regions show increasing vegetation, demonstrating that
+            environmental recovery and restoration are possible.
           </span>
         </div>
 
         <div class="splash-explanation-item">
-          <strong>Change map</strong>
+          <strong>Progress is not equal everywhere</strong>
 
           <span>
-            Green shows vegetation growth, orange shows vegetation
-            decline, and taller spikes show a larger amount of change
-            between 2000 and 2025.
+            Regional differences reveal where restoration is succeeding
+            and where ecosystems continue to face challenges.
           </span>
         </div>
       </div>
@@ -140,7 +138,7 @@
           ></span>
 
           <span>
-            Taller spikes = stronger vegetation or greater change
+            Taller spikes = higher vegetation density or greater change
           </span>
         </div>
       </div>
@@ -281,13 +279,11 @@
        ===================================================== -->
 
   <main class="map-stage">
-    <!-- Single map used for Vegetation 2025 and Show Change -->
     <div
       id="single-map"
       aria-label="Interactive global vegetation globe"
     ></div>
 
-    <!-- Side-by-side maps used for Compare -->
     <div
       id="compare-view"
       aria-label="Side-by-side vegetation comparison"
@@ -310,7 +306,6 @@
       aria-hidden="true"
     ></div>
 
-    <!-- Compare-year selector -->
     <div
       class="compare-switch"
       aria-label="Choose comparison year"
@@ -341,20 +336,20 @@
       </div>
     </div>
 
-    <!-- Regional story text -->
     <section
       class="story-panel"
       aria-live="polite"
     >
       <h2 id="story-title">
-        Global Vegetation Growth
+        A Greener Global Picture
       </h2>
 
       <p id="story-text">
-        Across the world, vegetation has not changed evenly. This map
-        uses MODIS NDVI satellite data to show where plant life appears
-        to have expanded, declined, or remained relatively stable from
-        2000 to 2025.
+        Many parts of the world appear greener in 2025 than they did in
+        2000. This encouraging pattern suggests that vegetation can recover
+        through natural processes, rainfall changes, improved land
+        management, and environmental restoration. However, progress is
+        uneven, so regional details remain important.
       </p>
     </section>
 
@@ -366,7 +361,6 @@
       class="map-legend"
       aria-label="Map legend"
     >
-      <!-- Visible on Vegetation 2025 and Compare -->
       <div class="map-legend-row legend-present-only">
         <span
           class="map-legend-gradient"
@@ -393,7 +387,6 @@
         </span>
       </div>
 
-      <!-- Visible only on Show Change -->
       <div class="map-legend-row legend-change-only">
         <span
           class="map-legend-swatch map-legend-growth"
@@ -552,15 +545,37 @@
       </p>
 
       <h2 id="about-title">
-        Mapping Global Vegetation Change
+        Mapping a Greener World
       </h2>
 
       <p>
         This interactive visualization uses MODIS Normalized Difference
-        Vegetation Index data to compare vegetation patterns in 2000,
-        2013, and 2025. The goal is to show that global vegetation change
-        is more complicated than a simple story of universal growth or
-        universal loss.
+        Vegetation Index data to compare vegetation patterns in 2000, 2013,
+        and 2025. Many people may expect environmental pressure to have caused
+        vegetation loss almost everywhere. However, the satellite record
+        reveals a more hopeful and complex story: large parts of the world
+        have become greener.
+      </p>
+
+      <p>
+        This progress is not identical in every region. Some areas show
+        vegetation recovery, rainfall-driven growth, improved farming, or the
+        effects of large restoration programs, while other areas continue to
+        experience deforestation, drought, and land degradation. Therefore,
+        this project invites readers to explore both the encouraging global
+        trend and the regional challenges that remain.
+      </p>
+
+      <h3>
+        Why this matters
+      </h3>
+
+      <p>
+        The green and orange spikes represent more than satellite pixels.
+        They reflect changing forests, farms, grasslands, habitats, water
+        resources, and communities. The visualization shows that environmental
+        improvement is possible and that restoration and protection efforts
+        can make a meaningful difference.
       </p>
 
       <h3>
@@ -633,13 +648,13 @@
       </p>
 
       <h2 id="tour-title">
-        Why this project?
+        A planet under pressure
       </h2>
 
       <p id="tour-text">
-        Many people might assume human activity has simply caused Earth
-        to lose vegetation everywhere. This project starts from a more
-        complicated question.
+        Human activity has transformed forests, grasslands, farms, and
+        drylands around the world. Many people may expect these pressures
+        to have caused vegetation to decline almost everywhere.
       </p>
 
       <div class="tour-actions">
