@@ -1,305 +1,666 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="auto">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+
+  <meta
+    name="description"
+    content="An interactive 3D globe exploring global vegetation intensity and vegetation change from 2000 to 2025 using MODIS NDVI data."
+  >
 
   <title>The Greening Earth</title>
 
-  <script>
-    const savedTheme = localStorage.getItem("theme-preference") || "auto";
-    document.documentElement.dataset.theme = savedTheme;
-  </script>
-
   <link
-    rel="preload"
-    href="data/actual_ndvi_spikes_2025_low.json"
-    as="fetch"
-    crossorigin="anonymous"
-  />
-
-  <link
-    rel="preload"
-    href="data/actual_ndvi_spikes_2000_low.json"
-    as="fetch"
-    crossorigin="anonymous"
-  />
-
-  <link
-    href="https://api.mapbox.com/mapbox-gl-js/v3.5.1/mapbox-gl.css"
+    href="https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.css"
     rel="stylesheet"
-  />
+  >
 
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css">
+
+  <script>
+    /*
+     * Apply the saved theme before the page renders.
+     * This prevents a light-mode flash when the saved theme is dark.
+     */
+    (() => {
+      const savedTheme =
+        localStorage.getItem("theme-preference") || "auto";
+
+      document.documentElement.dataset.theme = savedTheme;
+    })();
+  </script>
 </head>
 
 <body class="mode-present">
-  <section id="about-modal" class="about-modal" aria-hidden="true">
-    <div class="about-card">
-      <button
-        id="about-close-button"
-        class="about-close-button"
-        aria-label="Close about panel"
-      >
-        ×
-      </button>
+  <!-- =====================================================
+       Splash / introduction screen
+       ===================================================== -->
 
-      <p class="about-kicker">About this project</p>
-      <h2>The Greening Earth</h2>
-
-      <p>
-        This project explores how global vegetation has changed over time using
-        MODIS NDVI satellite data. We convert vegetation intensity and long-term
-        change into 3D map spikes so readers can compare broad global patterns
-        and then zoom into selected regions.
-      </p>
-
-      <h3>Why this project?</h3>
-      <p>
-        Many people may assume that human activity has simply caused Earth to
-        lose vegetation everywhere. Our project shows that the story is more
-        complex: some regions are greening, some are declining, and the causes
-        vary by place.
-      </p>
-
-      <h3>What the map shows</h3>
-      <p>
-        Green spikes represent areas where vegetation increased, while orange
-        spikes represent areas where vegetation declined. Taller spikes indicate
-        stronger vegetation intensity or larger change.
-      </p>
-
-      <h3>Dataset and method</h3>
-      <p>
-        The visualization uses MODIS NDVI data for selected years. The data is
-        aggregated into map cells at different detail levels so the webpage can
-        load smoothly while still preserving regional vegetation patterns. The
-        change view compares vegetation values between 2000 and 2025.
-      </p>
-
-      <h3>Team</h3>
-      <p>
-        Add your team members here:
-        <br />
-        Yutao Lin, Team Member 2, Team Member 3
-      </p>
-
-      <h3>Links</h3>
-      <p>
-        <a
-          href="https://github.com/yutaolin018/DSC106-Final_Project"
-          target="_blank"
-          rel="noopener"
-        >
-          View the GitHub repository
-        </a>
-      </p>
-    </div>
-  </section>
-
-  <section id="splash-screen" class="splash-screen">
+  <section
+    id="splash-screen"
+    class="splash-screen"
+    aria-labelledby="splash-title"
+  >
     <div class="splash-card">
-      <p class="splash-kicker">DSC 106 Final Project</p>
-
-      <h1>The Greening Earth</h1>
-
-      <p>
-        Explore how global vegetation has shifted over time using MODIS NDVI
-        satellite data. This project turns vegetation intensity and long-term
-        change into 3D spikes, helping reveal broad greening trends, regional
-        declines, and uneven patterns of environmental change across the world.
+      <p class="splash-kicker">
+        Global vegetation, 2000–2025
       </p>
 
-      <div class="splash-legend">
+      <h1 id="splash-title">
+        The Greening Earth
+      </h1>
+
+      <p>
+        This project uses satellite-based NDVI data to explore where
+        vegetation is greener, where it has declined, and how those
+        patterns differ around the world.
+      </p>
+
+      <div class="splash-explanation">
+        <div class="splash-explanation-item">
+          <strong>Vegetation maps</strong>
+
+          <span>
+            Color and spike height show vegetation intensity.
+            Higher NDVI generally means greener, denser, or healthier
+            vegetation.
+          </span>
+        </div>
+
+        <div class="splash-explanation-item">
+          <strong>Change map</strong>
+
+          <span>
+            Green shows vegetation growth, orange shows vegetation
+            decline, and taller spikes show a larger amount of change
+            between 2000 and 2025.
+          </span>
+        </div>
+      </div>
+
+      <div
+        class="splash-legend"
+        aria-label="How to read the visualization"
+      >
+        <div class="legend-chip legend-chip--intensity">
+          <span
+            class="legend-gradient-preview"
+            aria-hidden="true"
+          ></span>
+
+          <span>
+            Light colors = lower NDVI
+          </span>
+        </div>
+
+        <div class="legend-chip legend-chip--intensity">
+          <span
+            class="legend-gradient-preview legend-gradient-preview--high"
+            aria-hidden="true"
+          ></span>
+
+          <span>
+            Dark green and blue = higher NDVI
+          </span>
+        </div>
+
         <div class="legend-chip legend-chip--growth">
-          <span class="legend-dot legend-dot--growth"></span>
-          <span>Green = vegetation growth</span>
+          <span
+            class="legend-dot legend-dot--growth"
+            aria-hidden="true"
+          ></span>
+
+          <span>
+            Green = vegetation growth
+          </span>
         </div>
 
         <div class="legend-chip legend-chip--decline">
-          <span class="legend-dot legend-dot--decline"></span>
-          <span>Orange = vegetation decline</span>
+          <span
+            class="legend-dot legend-dot--decline"
+            aria-hidden="true"
+          ></span>
+
+          <span>
+            Orange = vegetation decline
+          </span>
         </div>
 
         <div class="legend-chip legend-chip--height">
-          <span class="legend-dot legend-dot--height"></span>
-          <span>Taller spikes = stronger signal</span>
+          <span
+            class="legend-dot legend-dot--height"
+            aria-hidden="true"
+          ></span>
+
+          <span>
+            Taller spikes = stronger vegetation or greater change
+          </span>
         </div>
       </div>
 
-      <button id="start-button" class="start-button">Loading Map...</button>
+      <button
+        id="start-button"
+        class="start-button"
+        type="button"
+        disabled
+      >
+        Loading Map...
+      </button>
 
-      <p id="loading-status" class="loading-status">
-        Preparing map data...
+      <p
+        id="loading-status"
+        class="loading-status"
+        role="status"
+        aria-live="polite"
+      >
+        Preparing the interactive globe...
       </p>
     </div>
   </section>
 
-  <section id="tour-overlay" class="tour-overlay" aria-hidden="true">
-    <div class="tour-card">
-      <p id="tour-step-count" class="tour-step-count">Step 1 of 5</p>
-
-      <h2 id="tour-title">Why this project?</h2>
-
-      <p id="tour-text">
-        Many people might assume human activity has simply caused Earth to lose
-        vegetation everywhere. This project starts from a more complicated
-        question: where is the planet getting greener, where is vegetation
-        declining, and why do these patterns differ by region?
-      </p>
-
-      <div class="tour-actions">
-        <button id="tour-skip-button" class="tour-secondary-button">
-          Skip tour
-        </button>
-        <button id="tour-next-button" class="tour-primary-button">
-          Next
-        </button>
-      </div>
-    </div>
-  </section>
+  <!-- =====================================================
+       Top navigation and controls
+       ===================================================== -->
 
   <header class="top-ui">
     <div class="brand">
-      <strong>The Greening Earth</strong>
-      <button id="about-button" class="about-button">
-        About this Project
+      <strong>
+        The Greening Earth
+      </strong>
+
+      <button
+        id="about-button"
+        class="about-button"
+        type="button"
+      >
+        About This Project
       </button>
     </div>
 
-    <nav class="compare-tabs">
-      <button class="compare-tab" data-mode="compare">
-        Compare
-        <small>2000 / 2013 vs. 2025</small>
-      </button>
+    <nav
+      class="compare-tabs"
+      aria-label="Map display mode"
+    >
+      <button
+        class="compare-tab"
+        type="button"
+        data-mode="compare"
+      >
+        Compare Years
 
-      <button class="compare-tab selected" data-mode="present">
-        Vegetation 2025
-        <small>Latest MODIS NDVI layer</small>
-      </button>
-
-      <button class="compare-tab" data-mode="change">
-        Show change, 2000–2025
         <small>
-          <span class="decline-dot">■</span> Vegetation decline&nbsp;&nbsp;
-          <span class="growth-dot">■</span> Vegetation growth
+          Earlier year beside 2025
+        </small>
+      </button>
+
+      <button
+        class="compare-tab selected"
+        type="button"
+        data-mode="present"
+      >
+        Vegetation 2025
+
+        <small>
+          Current vegetation intensity
+        </small>
+      </button>
+
+      <button
+        class="compare-tab"
+        type="button"
+        data-mode="change"
+      >
+        Show Change
+
+        <small>
+          Growth and decline since 2000
         </small>
       </button>
     </nav>
 
     <div class="region-jump">
-      <label for="region-select">Jump to</label>
-      <select id="region-select">
-        <option value="global">Global Overview</option>
-        <option value="amazon">Amazon Basin</option>
-        <option value="sahel">Sahel / West Africa</option>
-        <option value="china">Northern China / Inner Mongolia</option>
+      <label for="region-select">
+        Jump to
+      </label>
+
+      <select
+        id="region-select"
+        aria-label="Jump to a region"
+      >
+        <option value="global">
+          Global overview
+        </option>
+
+        <option value="amazon">
+          Amazon Basin
+        </option>
+
+        <option value="sahel">
+          Sahel / West Africa
+        </option>
+
+        <option value="china">
+          Northern China / Inner Mongolia
+        </option>
       </select>
 
       <div class="theme-switcher">
-        <label for="theme-select">Theme</label>
-        <select id="theme-select" aria-label="Theme">
-          <option value="auto">Auto</option>
-          <option value="light">Light</option>
-          <option value="dark">Dark</option>
+        <label for="theme-select">
+          Theme
+        </label>
+
+        <select
+          id="theme-select"
+          aria-label="Select page theme"
+        >
+          <option value="auto">
+            Auto
+          </option>
+
+          <option value="light">
+            Light
+          </option>
+
+          <option value="dark">
+            Dark
+          </option>
         </select>
       </div>
     </div>
   </header>
 
+  <!-- =====================================================
+       Main visualization
+       ===================================================== -->
+
   <main class="map-stage">
-    <div id="single-map" class="map-view"></div>
+    <!-- Single map used for Vegetation 2025 and Show Change -->
+    <div
+      id="single-map"
+      aria-label="Interactive global vegetation globe"
+    ></div>
 
-    <div id="compare-view">
-      <div id="left-map" class="compare-map"></div>
-      <div id="right-map" class="compare-map"></div>
+    <!-- Side-by-side maps used for Compare -->
+    <div
+      id="compare-view"
+      aria-label="Side-by-side vegetation comparison"
+    >
+      <div
+        id="left-map"
+        class="compare-map"
+        aria-label="Earlier vegetation year"
+      ></div>
 
-      <div class="split-line"></div>
+      <div
+        id="right-map"
+        class="compare-map"
+        aria-label="Vegetation in 2025"
+      ></div>
+    </div>
 
-      <div class="compare-switch">
-        <div class="compare-year-stack">
-          <button class="compare-year-option selected" data-compare-year="2000">
-            2000
-          </button>
-          <button class="compare-year-option" data-compare-year="2013">
-            2013
-          </button>
-        </div>
+    <div
+      class="split-line"
+      aria-hidden="true"
+    ></div>
 
-        <span class="compare-current-year">2025</span>
+    <!-- Compare-year selector -->
+    <div
+      class="compare-switch"
+      aria-label="Choose comparison year"
+    >
+      <div class="compare-year-stack">
+        <button
+          class="compare-year-option selected"
+          type="button"
+          data-compare-year="2000"
+        >
+          2000
+        </button>
+
+        <button
+          class="compare-year-option"
+          type="button"
+          data-compare-year="2013"
+        >
+          2013
+        </button>
+      </div>
+
+      <div
+        class="compare-current-year"
+        aria-label="Current comparison year"
+      >
+        2025
       </div>
     </div>
 
-    <section class="story-panel">
-      <h2 id="story-title">Global Vegetation Growth</h2>
+    <!-- Regional story text -->
+    <section
+      class="story-panel"
+      aria-live="polite"
+    >
+      <h2 id="story-title">
+        Global Vegetation Growth
+      </h2>
+
       <p id="story-text">
-        Across the world, vegetation has not changed evenly. This map uses MODIS
-        NDVI satellite data to show where plant life appears to have expanded,
-        declined, or remained relatively stable from 2000 to 2025. Green spikes
-        highlight areas of vegetation growth, while orange spikes show decline.
+        Across the world, vegetation has not changed evenly. This map
+        uses MODIS NDVI satellite data to show where plant life appears
+        to have expanded, declined, or remained relatively stable from
+        2000 to 2025.
       </p>
     </section>
 
-    <div class="map-legend">
+    <!-- ===================================================
+         Map legend
+         =================================================== -->
+
+    <aside
+      class="map-legend"
+      aria-label="Map legend"
+    >
+      <!-- Visible on Vegetation 2025 and Compare -->
       <div class="map-legend-row legend-present-only">
-        <span class="map-legend-gradient"></span>
-        <span>Higher NDVI / stronger vegetation</span>
+        <span
+          class="map-legend-gradient"
+          aria-hidden="true"
+        ></span>
+
+        <span>
+          Lower NDVI
+        </span>
+
+        <span>
+          Higher NDVI
+        </span>
+      </div>
+
+      <div class="map-legend-row legend-present-only">
+        <span
+          class="map-legend-height-icon"
+          aria-hidden="true"
+        ></span>
+
+        <span>
+          Taller spikes = greener, denser vegetation
+        </span>
+      </div>
+
+      <!-- Visible only on Show Change -->
+      <div class="map-legend-row legend-change-only">
+        <span
+          class="map-legend-swatch map-legend-growth"
+          aria-hidden="true"
+        ></span>
+
+        <span>
+          Vegetation growth
+        </span>
       </div>
 
       <div class="map-legend-row legend-change-only">
-        <span class="map-legend-swatch map-legend-growth"></span>
-        <span>Vegetation growth</span>
+        <span
+          class="map-legend-swatch map-legend-decline"
+          aria-hidden="true"
+        ></span>
+
+        <span>
+          Vegetation decline
+        </span>
       </div>
 
       <div class="map-legend-row legend-change-only">
-        <span class="map-legend-swatch map-legend-decline"></span>
-        <span>Vegetation decline</span>
-      </div>
+        <span
+          class="map-legend-height-icon"
+          aria-hidden="true"
+        ></span>
 
-      <div class="map-legend-row">
-        <span class="map-legend-height-icon"></span>
-        <span>Taller spikes = stronger signal</span>
+        <span>
+          Taller spikes = greater change
+        </span>
       </div>
-    </div>
+    </aside>
 
-    <button id="mobile-chart-toggle" class="mobile-chart-toggle">
+    <!-- ===================================================
+         Regional summary chart
+         =================================================== -->
+
+    <button
+      id="mobile-chart-toggle"
+      class="mobile-chart-toggle"
+      type="button"
+      aria-controls="chart-panel"
+    >
       Summary
     </button>
 
-    <section class="chart-panel">
+    <aside
+      id="chart-panel"
+      class="chart-panel"
+      aria-label="Regional vegetation summary"
+    >
       <div class="chart-panel-header">
-        <h3 id="chart-title">Regional Summary</h3>
+        <h3 id="chart-title">
+          Global Vegetation Growth Summary
+        </h3>
+
         <button
           id="chart-close-button"
           class="chart-close-button"
-          aria-label="Close summary"
+          type="button"
+          aria-label="Close regional summary"
         >
           ×
         </button>
       </div>
 
       <div class="mini-chart-block">
-        <div class="mini-chart-label">Average NDVI</div>
-        <div id="ndvi-bar-chart" class="bar-chart"></div>
+        <div class="mini-chart-label">
+          Average NDVI
+        </div>
+
+        <div
+          id="ndvi-bar-chart"
+          class="bar-chart"
+        >
+          <div class="chart-loading">
+            Loading regional data...
+          </div>
+        </div>
       </div>
 
       <div class="mini-chart-block">
-        <div class="mini-chart-label">Change Direction</div>
-        <div id="change-summary-chart" class="change-chart"></div>
+        <div class="mini-chart-label">
+          Share of changed cells
+        </div>
+
+        <div
+          id="change-summary-chart"
+          class="change-chart"
+        >
+          <div class="change-box growth">
+            <strong>—</strong>
+            <span>growth cells</span>
+          </div>
+
+          <div class="change-box decline">
+            <strong>—</strong>
+            <span>decline cells</span>
+          </div>
+        </div>
       </div>
 
       <div class="mini-chart-block">
-        <div class="mini-chart-label">Estimated Green-Space Area Change</div>
-        <div id="area-summary-chart" class="area-chart"></div>
+        <div class="mini-chart-label">
+          Approximate changed area
+        </div>
+
+        <div
+          id="area-summary-chart"
+          class="area-chart"
+        >
+          <div class="area-box added">
+            <strong>—</strong>
+            <span>estimated added green-space area</span>
+          </div>
+
+          <div class="area-box lost">
+            <strong>—</strong>
+            <span>estimated lost green-space area</span>
+          </div>
+        </div>
       </div>
 
       <p id="chart-caption">
-        Select a region to see a summary of vegetation intensity and change.
+        Area values are approximate and are calculated from changed
+        MODIS NDVI grid cells in the selected region.
       </p>
-    </section>
+    </aside>
   </main>
 
-  <script src="https://api.mapbox.com/mapbox-gl-js/v3.5.1/mapbox-gl.js"></script>
+  <!-- =====================================================
+       About modal
+       ===================================================== -->
+
+  <div
+    id="about-modal"
+    class="about-modal"
+    aria-hidden="true"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="about-title"
+  >
+    <article class="about-card">
+      <button
+        id="about-close-button"
+        class="about-close-button"
+        type="button"
+        aria-label="Close project information"
+      >
+        ×
+      </button>
+
+      <p class="about-kicker">
+        About this project
+      </p>
+
+      <h2 id="about-title">
+        Mapping Global Vegetation Change
+      </h2>
+
+      <p>
+        This interactive visualization uses MODIS Normalized Difference
+        Vegetation Index data to compare vegetation patterns in 2000,
+        2013, and 2025. The goal is to show that global vegetation change
+        is more complicated than a simple story of universal growth or
+        universal loss.
+      </p>
+
+      <h3>
+        How to interpret the maps
+      </h3>
+
+      <p>
+        On the vegetation maps, higher NDVI generally indicates greener,
+        denser, or healthier plant cover. On the change map, green cells
+        represent an increase in NDVI and orange cells represent a
+        decrease. Spike height represents vegetation intensity on the
+        vegetation maps and the magnitude of change on the change map.
+      </p>
+
+      <h3>
+        Data
+      </h3>
+
+      <p>
+        The project uses satellite-based NDVI data derived from NASA
+        MODIS vegetation products. The visualization is intended for
+        exploration and broad comparison rather than precise measurement
+        of forest cover or land-use change.
+      </p>
+
+      <h3>
+        Team
+      </h3>
+
+      <p>
+        Yutao Lin, Jacob Kavanal, Kang Lee, Raffi Dulgerian
+      </p>
+
+      <h3>
+        Project repository
+      </h3>
+
+      <p>
+        <a
+          href="https://github.com/yutaolin018/DSC106-Final_Project"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          View the project on GitHub
+        </a>
+      </p>
+    </article>
+  </div>
+
+  <!-- =====================================================
+       Guided tour
+       ===================================================== -->
+
+  <div
+    id="tour-overlay"
+    class="tour-overlay"
+    aria-hidden="true"
+  >
+    <section
+      class="tour-card"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="tour-title"
+    >
+      <p
+        id="tour-step-count"
+        class="tour-step-count"
+      >
+        Step 1 of 5
+      </p>
+
+      <h2 id="tour-title">
+        Why this project?
+      </h2>
+
+      <p id="tour-text">
+        Many people might assume human activity has simply caused Earth
+        to lose vegetation everywhere. This project starts from a more
+        complicated question.
+      </p>
+
+      <div class="tour-actions">
+        <button
+          id="tour-skip-button"
+          class="tour-secondary-button"
+          type="button"
+        >
+          Skip Tour
+        </button>
+
+        <button
+          id="tour-next-button"
+          class="tour-primary-button"
+          type="button"
+        >
+          Next
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.js"></script>
   <script src="main.js"></script>
 </body>
 </html>
