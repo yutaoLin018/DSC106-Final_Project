@@ -133,7 +133,7 @@ const tourSteps = [
 ];
 
 /* =========================================================
-   Geographic bounds for chart calculations
+   Geographic bounds
    ========================================================= */
 
 const regionBounds = {
@@ -214,15 +214,12 @@ let activeDetail = {
 
 const mapOptions = {
   style: "mapbox://styles/mapbox/light-v11",
-
   center: views.global.center,
   zoom: views.global.zoom,
   pitch: views.global.pitch,
   bearing: views.global.bearing,
-
   projection: "globe",
   renderWorldCopies: false,
-
   antialias: false,
   attributionControl: true
 };
@@ -412,6 +409,7 @@ async function initAllMaps() {
   setupMobileChartToggle();
   setupAboutModal();
   setupGuidedTour();
+  setupTakeawayPanel();
   setupPopup(singleMap);
   setupPopup(leftMap);
   setupPopup(rightMap);
@@ -421,7 +419,11 @@ async function initAllMaps() {
   updateStoryPanel("global");
   updateRegionCharts("global");
 
-  document.body.classList.remove("mode-compare", "mode-change");
+  document.body.classList.remove(
+    "mode-compare",
+    "mode-change"
+  );
+
   document.body.classList.add("mode-present");
 
   currentMode = "present";
@@ -442,7 +444,7 @@ async function initAllMaps() {
 }
 
 /* =========================================================
-   Theme selector
+   Theme
    ========================================================= */
 
 function setupThemeSwitcher() {
@@ -471,7 +473,7 @@ function setupThemeSwitcher() {
 }
 
 /* =========================================================
-   Data preloading
+   Data loading
    ========================================================= */
 
 function preloadLikelyNextFiles() {
@@ -481,6 +483,40 @@ function preloadLikelyNextFiles() {
     getGeoJSON("2013", "medium").catch(console.error);
     getChangeGeoJSON("medium").catch(console.error);
   }, 1500);
+}
+
+async function getGeoJSON(year, detail) {
+  const key = `${year}-${detail}`;
+
+  if (!cachedData[key]) {
+    cachedData[key] = loadGeoJSON(
+      spikeFilesByDetail[year][detail]
+    );
+  }
+
+  return cachedData[key];
+}
+
+async function getChangeGeoJSON(detail) {
+  if (!cachedChangeData[detail]) {
+    cachedChangeData[detail] = loadGeoJSON(
+      changeFilesByDetail[detail]
+    );
+  }
+
+  return cachedChangeData[detail];
+}
+
+async function loadGeoJSON(path) {
+  const response = await fetch(path);
+
+  if (!response.ok) {
+    throw new Error(
+      `Failed to load ${path}: ${response.status}`
+    );
+  }
+
+  return response.json();
 }
 
 /* =========================================================
@@ -518,11 +554,9 @@ function addChangeLayerToSingleMap(data) {
       id: "change-spikes-layer",
       type: "fill-extrusion",
       source: "change-spikes",
-
       layout: {
         visibility: "none"
       },
-
       paint: getChangePaint()
     });
   }
@@ -582,22 +616,18 @@ function getChangePaint() {
   return {
     "fill-extrusion-color": [
       "case",
-
       [">", ["get", "change"], 0],
       "#2ca25f",
-
       "#e76f51"
     ],
 
     "fill-extrusion-height": [
       "min",
-
       [
         "*",
         ["abs", ["get", "change"]],
         320000
       ],
-
       65000
     ],
 
@@ -611,7 +641,7 @@ function getChangePaint() {
 }
 
 /* =========================================================
-   Detail-level selection
+   Detail level
    ========================================================= */
 
 function detailFromZoom(zoom, viewName = activeView) {
@@ -650,48 +680,6 @@ function changeDetailFromZoom(zoom, viewName = activeView) {
   return "high";
 }
 
-/* =========================================================
-   Data loading
-   ========================================================= */
-
-async function getGeoJSON(year, detail) {
-  const key = `${year}-${detail}`;
-
-  if (!cachedData[key]) {
-    cachedData[key] = loadGeoJSON(
-      spikeFilesByDetail[year][detail]
-    );
-  }
-
-  return cachedData[key];
-}
-
-async function getChangeGeoJSON(detail) {
-  if (!cachedChangeData[detail]) {
-    cachedChangeData[detail] = loadGeoJSON(
-      changeFilesByDetail[detail]
-    );
-  }
-
-  return cachedChangeData[detail];
-}
-
-async function loadGeoJSON(path) {
-  const response = await fetch(path);
-
-  if (!response.ok) {
-    throw new Error(
-      `Failed to load ${path}: ${response.status}`
-    );
-  }
-
-  return response.json();
-}
-
-/* =========================================================
-   Detail switching while zooming
-   ========================================================= */
-
 function debounce(func, wait) {
   let timeout;
 
@@ -717,17 +705,14 @@ function setupDetailSwitching() {
     }
   }, 300);
 
-  const handleCompareZoom = debounce(
-    async map => {
-      if (currentMode === "compare") {
-        await loadDetailForCurrentView(
-          activeView,
-          getCurrentCamera(map)
-        );
-      }
-    },
-    300
-  );
+  const handleCompareZoom = debounce(async map => {
+    if (currentMode === "compare") {
+      await loadDetailForCurrentView(
+        activeView,
+        getCurrentCamera(map)
+      );
+    }
+  }, 300);
 
   singleMap.on("zoomend", handleSingleZoom);
 
@@ -763,7 +748,8 @@ async function loadDetailForCurrentView(viewName, view) {
         detail
       );
 
-      const source = singleMap.getSource("spikes");
+      const source =
+        singleMap.getSource("spikes");
 
       if (source) {
         source.setData(data2025);
@@ -779,8 +765,11 @@ async function loadDetailForCurrentView(viewName, view) {
           getGeoJSON("2025", detail)
         ]);
 
-      const leftSource = leftMap.getSource("spikes");
-      const rightSource = rightMap.getSource("spikes");
+      const leftSource =
+        leftMap.getSource("spikes");
+
+      const rightSource =
+        rightMap.getSource("spikes");
 
       if (leftSource) {
         leftSource.setData(leftData);
@@ -817,11 +806,12 @@ async function loadDetailForCurrentView(viewName, view) {
 }
 
 /* =========================================================
-   Top mode tabs
+   Mode controls
    ========================================================= */
 
 function setupTopTabs() {
-  const tabs = document.querySelectorAll(".compare-tab");
+  const tabs =
+    document.querySelectorAll(".compare-tab");
 
   tabs.forEach(tab => {
     tab.addEventListener("click", async () => {
@@ -837,10 +827,6 @@ function setupTopTabs() {
     });
   });
 }
-
-/* =========================================================
-   Compare year controls
-   ========================================================= */
 
 function setupCompareYearSwitch() {
   const buttons =
@@ -861,19 +847,23 @@ function setupCompareYearSwitch() {
         return;
       }
 
-      const camera = getCurrentCamera(leftMap);
+      const camera =
+        getCurrentCamera(leftMap);
 
-      const detail = detailFromZoom(
-        camera.zoom,
-        activeView
-      );
+      const detail =
+        detailFromZoom(
+          camera.zoom,
+          activeView
+        );
 
-      const data = await getGeoJSON(
-        compareBaseYear,
-        detail
-      );
+      const data =
+        await getGeoJSON(
+          compareBaseYear,
+          detail
+        );
 
-      const source = leftMap.getSource("spikes");
+      const source =
+        leftMap.getSource("spikes");
 
       if (source) {
         source.setData(data);
@@ -884,10 +874,6 @@ function setupCompareYearSwitch() {
   });
 }
 
-/* =========================================================
-   Mode switching
-   ========================================================= */
-
 function getVisibleCamera() {
   if (currentMode === "compare") {
     return getCurrentCamera(leftMap);
@@ -897,8 +883,11 @@ function getVisibleCamera() {
 }
 
 function clearCompareMaps() {
-  const leftSource = leftMap.getSource("spikes");
-  const rightSource = rightMap.getSource("spikes");
+  const leftSource =
+    leftMap.getSource("spikes");
+
+  const rightSource =
+    rightMap.getSource("spikes");
 
   if (leftSource) {
     leftSource.setData(emptyGeoJSON);
@@ -923,15 +912,18 @@ async function setMode(mode) {
     "mode-change"
   );
 
-  document.body.classList.add(`mode-${mode}`);
+  document.body.classList.add(
+    `mode-${mode}`
+  );
 
   if (mode === "compare") {
     closeMobileChart();
 
-    const detail = detailFromZoom(
-      previousCamera.zoom,
-      activeView
-    );
+    const detail =
+      detailFromZoom(
+        previousCamera.zoom,
+        activeView
+      );
 
     const [leftData, rightData] =
       await Promise.all([
@@ -939,8 +931,11 @@ async function setMode(mode) {
         getGeoJSON("2025", detail)
       ]);
 
-    const leftSource = leftMap.getSource("spikes");
-    const rightSource = rightMap.getSource("spikes");
+    const leftSource =
+      leftMap.getSource("spikes");
+
+    const rightSource =
+      rightMap.getSource("spikes");
 
     if (leftSource) {
       leftSource.setData(leftData);
@@ -975,17 +970,20 @@ async function setMode(mode) {
   if (mode === "present") {
     clearCompareMaps();
 
-    const detail = detailFromZoom(
-      previousCamera.zoom,
-      activeView
-    );
+    const detail =
+      detailFromZoom(
+        previousCamera.zoom,
+        activeView
+      );
 
-    const data2025 = await getGeoJSON(
-      "2025",
-      detail
-    );
+    const data2025 =
+      await getGeoJSON(
+        "2025",
+        detail
+      );
 
-    const source = singleMap.getSource("spikes");
+    const source =
+      singleMap.getSource("spikes");
 
     if (source) {
       source.setData(data2025);
@@ -1025,10 +1023,11 @@ async function setMode(mode) {
   if (mode === "change") {
     clearCompareMaps();
 
-    const detail = changeDetailFromZoom(
-      previousCamera.zoom,
-      activeView
-    );
+    const detail =
+      changeDetailFromZoom(
+        previousCamera.zoom,
+        activeView
+      );
 
     const changeData =
       await getChangeGeoJSON(detail);
@@ -1069,11 +1068,12 @@ async function setMode(mode) {
 }
 
 /* =========================================================
-   Region selector
+   Region controls
    ========================================================= */
 
 function setupRegionJump() {
-  const select = document.querySelector("#region-select");
+  const select =
+    document.querySelector("#region-select");
 
   if (!select) {
     return;
@@ -1101,8 +1101,11 @@ function updateStoryPanel(viewName) {
     return;
   }
 
-  const title = document.querySelector("#story-title");
-  const text = document.querySelector("#story-text");
+  const title =
+    document.querySelector("#story-title");
+
+  const text =
+    document.querySelector("#story-text");
 
   if (title) {
     title.textContent = story.title;
@@ -1147,7 +1150,6 @@ function mapFlyTo(map, view) {
     pitch: view.pitch,
     bearing: view.bearing,
     offset: view.offset || [0, 0],
-
     duration: 2800,
     speed: 0.45,
     curve: 1.45,
@@ -1181,7 +1183,6 @@ function getCurrentCamera(map) {
       center.lng,
       center.lat
     ],
-
     zoom: map.getZoom(),
     pitch: map.getPitch(),
     bearing: map.getBearing(),
@@ -1190,13 +1191,16 @@ function getCurrentCamera(map) {
 }
 
 /* =========================================================
-   Synchronize compare maps
+   Compare synchronization
    ========================================================= */
 
 function syncCompareMaps() {
   let activeMovingMap = null;
 
-  function createSyncHandler(sourceMap, targetMap) {
+  function createSyncHandler(
+    sourceMap,
+    targetMap
+  ) {
     return () => {
       if (
         currentMode !== "compare" ||
@@ -1229,10 +1233,16 @@ function syncCompareMaps() {
   }
 
   const onLeftMove =
-    createSyncHandler(leftMap, rightMap);
+    createSyncHandler(
+      leftMap,
+      rightMap
+    );
 
   const onRightMove =
-    createSyncHandler(rightMap, leftMap);
+    createSyncHandler(
+      rightMap,
+      leftMap
+    );
 
   leftMap.on("move", onLeftMove);
   rightMap.on("move", onRightMove);
@@ -1303,8 +1313,11 @@ function setupPopup(map) {
         return;
       }
 
-      const feature = event.features[0];
-      const currentId = cellKey(feature);
+      const feature =
+        event.features[0];
+
+      const currentId =
+        cellKey(feature);
 
       if (currentId === lastHoveredId) {
         return;
@@ -1373,8 +1386,11 @@ function setupPopup(map) {
         return;
       }
 
-      const feature = event.features[0];
-      const currentId = cellKey(feature);
+      const feature =
+        event.features[0];
+
+      const currentId =
+        cellKey(feature);
 
       if (currentId === lastHoveredId) {
         return;
@@ -1492,7 +1508,6 @@ function pointInBounds(
 
 function polygonAreaKm2(coordinates) {
   const earthRadiusKm = 6371;
-
   let area = 0;
 
   if (
@@ -2059,15 +2074,6 @@ function setupGuidedTour() {
   const overlay =
     document.querySelector("#tour-overlay");
 
-  const title =
-    document.querySelector("#tour-title");
-
-  const text =
-    document.querySelector("#tour-text");
-
-  const count =
-    document.querySelector("#tour-step-count");
-
   const nextButton =
     document.querySelector("#tour-next-button");
 
@@ -2076,9 +2082,6 @@ function setupGuidedTour() {
 
   if (
     !overlay ||
-    !title ||
-    !text ||
-    !count ||
     !nextButton ||
     !skipButton
   ) {
@@ -2091,6 +2094,7 @@ function setupGuidedTour() {
       tourSteps.length - 1
     ) {
       await closeGuidedTour();
+      openTakeawayPanel();
       return;
     }
 
@@ -2286,6 +2290,99 @@ async function showTourStep(index) {
     step.view !== previousView
   ) {
     await flyAllTo(step.view);
+  }
+}
+
+/* =========================================================
+   Takeaway panel
+   ========================================================= */
+
+function setupTakeawayPanel() {
+  const overlay =
+    document.querySelector("#takeaway-overlay");
+
+  const closeButton =
+    document.querySelector("#takeaway-close-button");
+
+  const continueButton =
+    document.querySelector("#takeaway-continue-button");
+
+  const restartButton =
+    document.querySelector("#takeaway-restart-button");
+
+  if (!overlay) {
+    return;
+  }
+
+  if (closeButton) {
+    closeButton.addEventListener(
+      "click",
+      closeTakeawayPanel
+    );
+  }
+
+  if (continueButton) {
+    continueButton.addEventListener(
+      "click",
+      closeTakeawayPanel
+    );
+  }
+
+  if (restartButton) {
+    restartButton.addEventListener(
+      "click",
+      async () => {
+        closeTakeawayPanel();
+        await openGuidedTour();
+      }
+    );
+  }
+
+  overlay.addEventListener("click", event => {
+    if (event.target === overlay) {
+      closeTakeawayPanel();
+    }
+  });
+
+  document.addEventListener("keydown", event => {
+    if (
+      event.key === "Escape" &&
+      document.body.classList.contains("takeaway-open")
+    ) {
+      closeTakeawayPanel();
+    }
+  });
+}
+
+function openTakeawayPanel() {
+  const overlay =
+    document.querySelector("#takeaway-overlay");
+
+  document.body.classList.add(
+    "takeaway-open"
+  );
+
+  if (overlay) {
+    overlay.setAttribute(
+      "aria-hidden",
+      "false"
+    );
+  }
+}
+
+function closeTakeawayPanel() {
+  const overlay =
+    document.querySelector("#takeaway-overlay");
+
+  document.body.classList.remove(
+    "takeaway-open"
+  );
+
+  if (overlay) {
+    overlay.setAttribute(
+      "aria-hidden",
+      "true"
+    );
   }
 }
 
