@@ -91,7 +91,7 @@ const storyText = {
 
 const tourSteps = [
   {
-    title: "A planet under pressure",
+    title: "We Expect Decline",
     text:
       "Human activity has transformed forests, grasslands, farms, and drylands around the world. Many people may expect these pressures to have caused vegetation to decline almost everywhere.",
     mode: "present",
@@ -99,7 +99,7 @@ const tourSteps = [
   },
 
   {
-    title: "A hopeful surprise",
+    title: "The Big Picture",
     text:
       "MODIS satellite data reveals a more encouraging global pattern. Many parts of the world appear greener in 2025 than they did in 2000, showing that vegetation can recover, expand, or respond positively to changing conditions.",
     mode: "change",
@@ -107,7 +107,7 @@ const tourSteps = [
   },
 
   {
-    title: "Progress takes different forms",
+    title: "Different Forms of Progress",
     text:
       "Vegetation growth can result from forest recovery, increased rainfall, improved farming, better land management, or large restoration programs. But the pattern is not identical everywhere, so the meaning of greening depends on the region.",
     mode: "change",
@@ -115,16 +115,16 @@ const tourSteps = [
   },
 
   {
-    title: "Regional stories of recovery",
+    title: "Strong Recoveries",
     text:
-      "The Sahel shows signs of recovery after severe historical droughts. Northern China shows strong greening near major restoration projects. Even in the Amazon, areas of growth exist alongside places that still need protection.",
+      "The Sahel shows signs of recovery after severe historical droughts. There are large parts of Africa that show no growth or loss, due to these areas being deserts. Northern China shows strong greening near major restoration projects. Even in the Amazon, areas of growth exist alongside places that still need protection.",
     mode: "change",
     view: "sahel",
     openChart: true
   },
 
   {
-    title: "A greener future is possible",
+    title: "A Hopeful Future",
     text:
       "The global trend offers reasons for optimism, while regional differences show where continued restoration and protection are needed. Environmental improvement is possible, and human choices can help shape a greener future.",
     mode: "compare",
